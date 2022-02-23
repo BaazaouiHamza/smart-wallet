@@ -13,9 +13,7 @@ func createRandomRoutineTransactionPolicy(t *testing.T) RoutineTransactionPolicy
 	arg := CreateRoutineTransactionPolicyParams{
 		Name:              util.RandomName(),
 		Description:       util.RandomPostDescriptionOrText(),
-		Sender:            util.RandomNym(11),
-		Receiver:          util.RandomNym(11),
-		CreatedAt:         time.Now(),
+		NymID:             util.RandomNym(11),
 		ScheduleStartDate: time.Now(),
 		ScheduleEndDate:   time.Now().AddDate(1, 1, 1),
 		Frequency:         "Monthly",
@@ -30,4 +28,19 @@ func createRandomRoutineTransactionPolicy(t *testing.T) RoutineTransactionPolicy
 }
 func TestCreateRoutineTransactionPolicy(t *testing.T) {
 	createRandomRoutineTransactionPolicy(t)
+}
+func TestUpdateAccount(t *testing.T) {
+	routineTransactionPolicy := createRandomRoutineTransactionPolicy(t)
+
+	arg := UpdateRoutineTransactionPolicyParams{
+		ID:          routineTransactionPolicy.ID,
+		Name:        "Modified",
+		Description: "Hello im modified",
+	}
+
+	routineTransactionPolicy2, err := testQueries.UpdateRoutineTransactionPolicy(context.Background(), arg)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, routineTransactionPolicy2)
+
 }

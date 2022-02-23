@@ -6,8 +6,10 @@ import (
 	"time"
 )
 
-const randomNym = "123456789adcdefghijklmnopqrstuvwxyz"
-const alphabet = "adcdefghijklmnopqrstuvwxyz"
+const (
+	randomNym = "123456789adcdefghijklmnopqrstuvwxyz"
+	alphabet  = "adcdefghijklmnopqrstuvwxyz"
+)
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -16,6 +18,7 @@ func init() {
 //RandomString generate a random string of length n
 func RandomString(n int) string {
 	var sb strings.Builder
+
 	k := len(alphabet)
 
 	for i := 0; i < n; i++ {

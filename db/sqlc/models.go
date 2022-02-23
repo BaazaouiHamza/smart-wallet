@@ -3,16 +3,15 @@
 package db
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
 
 type RoutineTransactionPolicy struct {
+	ID                int64     `json:"id"`
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
-	Sender            string    `json:"sender"`
-	Receiver          string    `json:"receiver"`
+	NymID             string    `json:"nym_id"`
 	CreatedAt         time.Time `json:"created_at"`
 	ScheduleStartDate time.Time `json:"schedule_start_date"`
 	ScheduleEndDate   time.Time `json:"schedule_end_date"`
@@ -21,20 +20,20 @@ type RoutineTransactionPolicy struct {
 }
 
 type Transaction struct {
-	ID               int64         `json:"id"`
-	NymID            string        `json:"nym_id"`
-	TransferSequence int32         `json:"transfer_sequence"`
-	PolicyID         sql.NullInt64 `json:"policy_id"`
+	ID               int64           `json:"id"`
+	NymID            string          `json:"nym_id"`
+	TransferSequence int32           `json:"transfer_sequence"`
+	Transfer         json.RawMessage `json:"transfer"`
+	PolicyID         int64           `json:"policy_id"`
 }
 
 type TransactionTriggerPolicy struct {
+	ID              int64           `json:"id"`
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
-	Sender          string          `json:"sender"`
-	Receiver        string          `json:"receiver"`
+	NymID           string          `json:"nym_id"`
 	CreatedAt       time.Time       `json:"created_at"`
 	TargetedBalance json.RawMessage `json:"targeted_balance"`
-	Repeated        int32           `json:"repeated"`
 	Amount          int32           `json:"amount"`
 }
 
@@ -42,7 +41,6 @@ type UserPolicy struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	Sender      string    `json:"sender"`
-	Receiver    string    `json:"receiver"`
+	NymID       string    `json:"nym_id"`
 	CreatedAt   time.Time `json:"created_at"`
 }

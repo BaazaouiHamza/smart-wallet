@@ -12,24 +12,20 @@ const createRoutineTransactionPolicy = `-- name: CreateRoutineTransactionPolicy 
 INSERT INTO routine_transaction_policy (
   name,
   description,
-  sender,
-	receiver,
-	created_at,
+  nym_id,
   schedule_start_date, 
   schedule_end_date,
   frequency,
   amount
 ) VALUES (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9
-) RETURNING name, description, sender, receiver, created_at, schedule_start_date, schedule_end_date, frequency, amount
+  $1,$2,$3,$4,$5,$6,$7
+) RETURNING id, name, description, nym_id, created_at, schedule_start_date, schedule_end_date, frequency, amount
 `
 
 type CreateRoutineTransactionPolicyParams struct {
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
-	Sender            string    `json:"sender"`
-	Receiver          string    `json:"receiver"`
-	CreatedAt         time.Time `json:"created_at"`
+	NymID             string    `json:"nym_id"`
 	ScheduleStartDate time.Time `json:"schedule_start_date"`
 	ScheduleEndDate   time.Time `json:"schedule_end_date"`
 	Frequency         string    `json:"frequency"`
@@ -40,9 +36,7 @@ func (q *Queries) CreateRoutineTransactionPolicy(ctx context.Context, arg Create
 	row := q.db.QueryRowContext(ctx, createRoutineTransactionPolicy,
 		arg.Name,
 		arg.Description,
-		arg.Sender,
-		arg.Receiver,
-		arg.CreatedAt,
+		arg.NymID,
 		arg.ScheduleStartDate,
 		arg.ScheduleEndDate,
 		arg.Frequency,
@@ -50,10 +44,137 @@ func (q *Queries) CreateRoutineTransactionPolicy(ctx context.Context, arg Create
 	)
 	var i RoutineTransactionPolicy
 	err := row.Scan(
+		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.Sender,
-		&i.Receiver,
+		&i.NymID,
+		&i.CreatedAt,
+		&i.ScheduleStartDate,
+		&i.ScheduleEndDate,
+		&i.Frequency,
+		&i.Amount,
+	)
+	return i, err
+}
+
+const deleteRoutineTransactionPolicy = `-- name: DeleteRoutineTransactionPolicy :exec
+DELETE FROM routine_transaction_policy WHERE id = $1
+`
+
+func (q *Queries) DeleteRoutineTransactionPolicy(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteRoutineTransactionPolicy, id)
+	return err
+}
+
+const getRoutineTransactionPolicy = `-- name: GetRoutineTransactionPolicy :one
+SELECT id, name, description, nym_id, created_at, schedule_start_date, schedule_end_date, frequency, amount FROM routine_transaction_policy
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetRoutineTransactionPolicy(ctx context.Context, id int64) (RoutineTransactionPolicy, error) {
+	row := q.db.QueryRowContext(ctx, getRoutineTransactionPolicy, id)
+	var i RoutineTransactionPolicy
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.NymID,
+		&i.CreatedAt,
+		&i.ScheduleStartDate,
+		&i.ScheduleEndDate,
+		&i.Frequency,
+		&i.Amount,
+	)
+	return i, err
+}
+
+const listRoutineTransactionPolicies = `-- name: ListRoutineTransactionPolicies :many
+SELECT id, name, description, nym_id, created_at, schedule_start_date, schedule_end_date, frequency, amount FROM routine_transaction_policy WHERE nym_id = $1
+ORDER BY id
+LIMIT $2
+OFFSET $3
+`
+
+type ListRoutineTransactionPoliciesParams struct {
+	NymID  string `json:"nym_id"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+}
+
+func (q *Queries) ListRoutineTransactionPolicies(ctx context.Context, arg ListRoutineTransactionPoliciesParams) ([]RoutineTransactionPolicy, error) {
+	rows, err := q.db.QueryContext(ctx, listRoutineTransactionPolicies, arg.NymID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RoutineTransactionPolicy{}
+	for rows.Next() {
+		var i RoutineTransactionPolicy
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.NymID,
+			&i.CreatedAt,
+			&i.ScheduleStartDate,
+			&i.ScheduleEndDate,
+			&i.Frequency,
+			&i.Amount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateRoutineTransactionPolicy = `-- name: UpdateRoutineTransactionPolicy :one
+UPDATE routine_transaction_policy 
+SET name = $2,
+description=$3,
+nym_id=$4,
+schedule_start_date=$5,
+schedule_end_date=$6,
+frequency=$7,
+amount=$8
+WHERE id = $1
+RETURNING id, name, description, nym_id, created_at, schedule_start_date, schedule_end_date, frequency, amount
+`
+
+type UpdateRoutineTransactionPolicyParams struct {
+	ID                int64     `json:"id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	NymID             string    `json:"nym_id"`
+	ScheduleStartDate time.Time `json:"schedule_start_date"`
+	ScheduleEndDate   time.Time `json:"schedule_end_date"`
+	Frequency         string    `json:"frequency"`
+	Amount            int32     `json:"amount"`
+}
+
+func (q *Queries) UpdateRoutineTransactionPolicy(ctx context.Context, arg UpdateRoutineTransactionPolicyParams) (RoutineTransactionPolicy, error) {
+	row := q.db.QueryRowContext(ctx, updateRoutineTransactionPolicy,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.NymID,
+		arg.ScheduleStartDate,
+		arg.ScheduleEndDate,
+		arg.Frequency,
+		arg.Amount,
+	)
+	var i RoutineTransactionPolicy
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.NymID,
 		&i.CreatedAt,
 		&i.ScheduleStartDate,
 		&i.ScheduleEndDate,
