@@ -1,0 +1,53 @@
+definitions:
+  api.TTPRequest:
+    properties:
+      amount:
+        $ref: '#/definitions/types.Balance'
+      description:
+        type: string
+      name:
+        type: string
+      recipient:
+        items:
+          type: integer
+        type: array
+      targetedBalance:
+        $ref: '#/definitions/types.Balance'
+    required:
+    - amount
+    - description
+    - name
+    - recipient
+    - targetedBalance
+    type: object
+  types.Balance:
+    additionalProperties: {"type": "string", "enum": ["Contributor", "User"]}
+    type: object
+info:
+  contact: {}
+  description: ProsperUs Smart wallet
+  title: Smart Wallet
+  version: 0.0.0
+paths:
+  /api/:nym-id/transaction-trigger-policy:
+    post:
+      description: Create a transaction trigger policy
+      operationId: create-transaction-trigger-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: Transation Trigger Policy
+        in: body
+        name: TTPRequest
+        required: true
+        schema:
+          $ref: '#/definitions/api.TTPRequest'
+      responses:
+        "201":
+          description: ""
+      tags:
+      - transaction-trigger-policy
+swagger: "2.0"

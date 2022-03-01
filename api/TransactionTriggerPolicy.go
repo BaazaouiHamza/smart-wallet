@@ -1,152 +1,156 @@
 package api
 
 import (
-	"database/sql"
-	"encoding/json"
 	"net/http"
 
-	db "git.digitus.me/pfe/smart-wallet/db/sqlc"
+	prospercontext "git.digitus.me/library/prosper-kit/context"
+	"git.digitus.me/pfe/smart-wallet/types"
+	"git.digitus.me/prosperus/protocol/identity"
+	ptclTypes "git.digitus.me/prosperus/protocol/types"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type TTPRequest struct {
-	Name            string          `json:"name" binding:"required"`
-	Description     string          `json:"description" binding:"required"`
-	NymID           string          `json:"nym_id" binding:"required"`
-	TargetedBalance json.RawMessage `json:"targeted_balance" binding:"required"`
-	Amount          int32           `json:"amount" binding:"required,min=1"`
+	Name            string             `json:"name" binding:"required"`
+	Description     string             `json:"description" binding:"required"`
+	TargetedBalance ptclTypes.Balance  `json:"targetedBalance" binding:"required"`
+	Recipient       identity.PublicKey `json:"recipient" binding:"required"`
+	Amount          ptclTypes.Balance  `json:"amount" binding:"required,min=1"`
 }
 
-func (server *Server) createTransactionTriggerPolicy(ctx *gin.Context) {
+// @ID create-transaction-trigger-policy
+// @Tags transaction-trigger-policy
+// @Description Create a transaction trigger policy
+// @Param nym-id path string true "NymID"
+// @Param TTPRequest body TTPRequest true "Transation Trigger Policy"
+// @Success 201
+// @Router /api/:nym-id/transaction-trigger-policy [POST]
+func (s *Server) createTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
+	logger := prospercontext.GetLogger(c)
+
 	var req TTPRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	arg := db.CreateTransactionTriggerPolicyParams{
-		Name:            req.Name,
-		Description:     req.Description,
-		NymID:           req.NymID,
-		TargetedBalance: req.TargetedBalance,
-		Amount:          req.Amount,
-	}
-	ttp, err := server.store.CreateTransactionTriggerPolicy(ctx, arg)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	if err := c.ShouldBindJSON(&req); err != nil {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, ttp)
+	err := s.service.CreateTransactionTriggerPolicy(
+		prospercontext.JoinContexts(c),
+		types.TransactionTriggerPolicy{
+			Name:            req.Name,
+			Description:     req.Description,
+			NymID:           pk,
+			TargetedBalance: req.TargetedBalance,
+			Recipient:       req.Recipient,
+			Amount:          req.Amount,
+		},
+	)
+	switch {
+	case s.service.IsUserError(err):
+		logger.Debug("invalid transaction trigger policy", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid transaction trigger policy"})
+	case err != nil:
+		logger.Error("could not create transaction trigger policy", zap.Error(err))
+		c.Status(http.StatusInternalServerError)
+	default:
+		c.Status(http.StatusCreated)
+	}
 }
 
 type TTPRequestUri struct {
-	ID int64 `uri:"id" binding:"required,min=1"`
+	ID int `uri:"id" binding:"required,min=1"`
 }
 
-func (server *Server) updateTransactionTriggerPolicy(ctx *gin.Context) {
+func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
 	var req TTPRequest
 	var reqUri TTPRequestUri
-	if err := ctx.BindUri(&reqUri); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+
+	if err := c.BindUri(&reqUri); err != nil {
 		return
 	}
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+
+	if err := c.ShouldBindJSON(&req); err != nil {
 		return
 	}
-	arg := db.UpdateTransactionTriggerPolicyParams{
+
+	arg := types.TransactionTriggerPolicy{
 		ID:              reqUri.ID,
 		Name:            req.Name,
 		Description:     req.Description,
-		NymID:           req.NymID,
+		NymID:           pk,
 		Amount:          req.Amount,
 		TargetedBalance: req.TargetedBalance,
 	}
 
-	ttp, err := server.store.UpdateTransactionTriggerPolicy(ctx, arg)
+	err := s.service.UpdateTransactionTriggerPolicy(prospercontext.JoinContexts(c), arg)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, ttp)
+	c.Status(http.StatusNoContent)
 }
 
-func (server *Server) deleteTransactionTriggerPolicy(ctx *gin.Context) {
+func (s *Server) deleteTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
 	var reqUri TTPRequestUri
-	if err := ctx.BindUri(&reqUri); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	if err := c.BindUri(&reqUri); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	err := server.store.DeleteTransactionTriggerPolicy(ctx, reqUri.ID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+
+	if err := s.service.DeletePolicy(prospercontext.JoinContexts(c), pk, reqUri.ID); err != nil {
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "policy deleted succesfully",
-	})
+
+	c.Status(http.StatusNoContent)
 }
 
-func (server *Server) getTransactionTriggerPolicyById(ctx *gin.Context) {
+func (s *Server) getTransactionTriggerPolicyById(c *gin.Context, pk identity.PublicKey) {
 	var reqUri TTPRequestUri
 
-	if err := ctx.ShouldBindUri(&reqUri); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	if err := c.ShouldBindUri(&reqUri); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	ttp, err := server.store.GetTransactionTriggerPolicy(ctx, reqUri.ID)
+	ttp, err := s.service.GetTransactionTriggerPolicy(
+		prospercontext.JoinContexts(c), pk, reqUri.ID,
+	)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		if s.service.IsNotFoundError(err) {
+			c.Status(http.StatusNotFound)
 			return
 		}
 
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, ttp)
+	c.JSON(http.StatusOK, ttp)
 }
 
 type TTPNymUri struct {
-	NymID string `uri:"nym_id" binding:"required"`
+	NymID identity.PublicKey `uri:"nym_id" binding:"required"`
 }
 
 type listTransactionTriggerPolicies struct {
-	PageId   int32 `form:"page_id" binding:"required,min=1"`
-	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+	Page         int `form:"page" binding:"required,min=1"`
+	ItemsPerPage int `form:"itemsPerPage" binding:"required,min=5,max=10"`
 }
 
-func (server *Server) listTransactionTriggerPolicies(ctx *gin.Context) {
-	var reqUri TTPNymUri
+func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.PublicKey) {
 	var reqForm listTransactionTriggerPolicies
-	if err := ctx.ShouldBindQuery(&reqForm); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	if err := c.ShouldBindQuery(&reqForm); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	if err := ctx.BindUri(&reqUri); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	arg := db.ListTransactionTriggerPoliciesParams{
-		NymID:  reqUri.NymID,
-		Limit:  reqForm.PageSize,
-		Offset: (reqForm.PageId - 1) * reqForm.PageSize,
-	}
-	rtps, err := server.store.ListTransactionTriggerPolicies(ctx, arg)
+
+	rtps, count, err := s.service.ListTransactionTriggerPolicies(
+		prospercontext.JoinContexts(c), pk, reqForm.Page, reqForm.ItemsPerPage,
+	)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, rtps)
+
+	c.JSON(http.StatusOK, gin.H{"data": rtps, "total": count})
 }

@@ -11,7 +11,7 @@ lint:
 	@gometalinter ./... --deadline=1m
 
 swagger:
-	@swag i --parseDependency --parseDepth 1 -g delivery/api/server.go
+	@swag i --parseDependency --parseDepth 1 -g api/server.go
 	@rg --passthru -U '"additionalProperties":\s*\{\s*"type"\s*:\s*"integer"\s*\}' -r '"additionalProperties": {"type": "string", "enum": ["Contributor", "User"]}' docs/docs.go | sponge docs/docs.go
 	@rg --passthru -U '"additionalProperties":\s*\{\s*"type"\s*:\s*"integer"\s*\}' -r '"additionalProperties": {"type": "string", "enum": ["Contributor", "User"]}' docs/swagger.json | sponge docs/swagger.json
 	@rg --passthru -U 'additionalProperties:\s*type:\s*integer' -r 'additionalProperties: {"type": "string", "enum": ["Contributor", "User"]}' docs/swagger.yaml | sponge docs/swagger.yaml

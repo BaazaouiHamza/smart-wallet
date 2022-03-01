@@ -1,0 +1,79 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "ProsperUs Smart wallet",
+        "title": "Smart Wallet",
+        "contact": {},
+        "version": "0.0.0"
+    },
+    "paths": {
+        "/api/:nym-id/transaction-trigger-policy": {
+            "post": {
+                "description": "Create a transaction trigger policy",
+                "tags": [
+                    "transaction-trigger-policy"
+                ],
+                "operationId": "create-transaction-trigger-policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NymID",
+                        "name": "nym-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Transation Trigger Policy",
+                        "name": "TTPRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.TTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": ""
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "api.TTPRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "description",
+                "name",
+                "recipient",
+                "targetedBalance"
+            ],
+            "properties": {
+                "amount": {
+                    "$ref": "#/definitions/types.Balance"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "recipient": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "targetedBalance": {
+                    "$ref": "#/definitions/types.Balance"
+                }
+            }
+        },
+        "types.Balance": {
+            "type": "object",
+            "additionalProperties": {"type": "string", "enum": ["Contributor", "User"]}
+        }
+    }
+}
