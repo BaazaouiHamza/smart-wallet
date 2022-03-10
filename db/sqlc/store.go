@@ -10,7 +10,7 @@ import (
 
 type Store interface {
 	Querier
-	AddRoutineTransactionPolicy(ctx context.Context, arg CreateRoutineTransactionPolicyParams) (RoutineTransactionPolicyResult, error)
+	AddRoutineTransactionPolicy(ctx context.Context, arg CreateRTPParams) (RoutineTransactionPolicyResult, error)
 }
 
 //SQLStoreprovides all functions to execute SQL queries and transactions

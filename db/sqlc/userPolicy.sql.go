@@ -19,7 +19,7 @@ func (q *Queries) DeleteUserPolicy(ctx context.Context, id int64) error {
 }
 
 const getUserPolicy = `-- name: GetUserPolicy :one
-SELECT up.id, up.name, up.description, up.nym_id, up.created_at, ttp.id, ttp.name, ttp.description, ttp.nym_id, ttp.created_at, targeted_balance, amount FROM ONLY user_policy up JOIN transaction_trigger_policy ttp ON up.id=ttp.id
+SELECT up.id, up.name, up.description, up.nym_id, up.recipient, up.created_at, ttp.id, ttp.name, ttp.description, ttp.nym_id, ttp.recipient, ttp.created_at, targeted_balance, amount FROM ONLY user_policy up JOIN transaction_trigger_policy ttp ON up.id=ttp.id
 WHERE up.id = $1 LIMIT 1
 `
 
@@ -28,14 +28,16 @@ type GetUserPolicyRow struct {
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
 	NymID           string          `json:"nym_id"`
+	Recipient       string          `json:"recipient"`
 	CreatedAt       time.Time       `json:"created_at"`
 	ID_2            int64           `json:"id_2"`
 	Name_2          string          `json:"name_2"`
 	Description_2   string          `json:"description_2"`
 	NymID_2         string          `json:"nym_id_2"`
+	Recipient_2     string          `json:"recipient_2"`
 	CreatedAt_2     time.Time       `json:"created_at_2"`
 	TargetedBalance json.RawMessage `json:"targeted_balance"`
-	Amount          int32           `json:"amount"`
+	Amount          json.RawMessage `json:"amount"`
 }
 
 func (q *Queries) GetUserPolicy(ctx context.Context, id int64) (GetUserPolicyRow, error) {
@@ -46,11 +48,13 @@ func (q *Queries) GetUserPolicy(ctx context.Context, id int64) (GetUserPolicyRow
 		&i.Name,
 		&i.Description,
 		&i.NymID,
+		&i.Recipient,
 		&i.CreatedAt,
 		&i.ID_2,
 		&i.Name_2,
 		&i.Description_2,
 		&i.NymID_2,
+		&i.Recipient_2,
 		&i.CreatedAt_2,
 		&i.TargetedBalance,
 		&i.Amount,
@@ -59,7 +63,7 @@ func (q *Queries) GetUserPolicy(ctx context.Context, id int64) (GetUserPolicyRow
 }
 
 const listUserPolicies = `-- name: ListUserPolicies :many
-SELECT id, name, description, nym_id, created_at FROM user_policy WHERE nym_id = $1
+SELECT id, name, description, nym_id, recipient, created_at FROM user_policy WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3
@@ -85,6 +89,7 @@ func (q *Queries) ListUserPolicies(ctx context.Context, arg ListUserPoliciesPara
 			&i.Name,
 			&i.Description,
 			&i.NymID,
+			&i.Recipient,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

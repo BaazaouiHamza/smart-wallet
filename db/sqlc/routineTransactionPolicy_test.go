@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -10,17 +11,19 @@ import (
 )
 
 func createRandomRoutineTransactionPolicy(t *testing.T) RoutineTransactionPolicy {
-	arg := CreateRoutineTransactionPolicyParams{
+	arg := CreateRTPParams{
 		Name:              util.RandomName(),
 		Description:       util.RandomPostDescriptionOrText(),
 		NymID:             util.RandomNym(11),
 		ScheduleStartDate: time.Now(),
 		ScheduleEndDate:   time.Now().AddDate(1, 1, 1),
 		Frequency:         "Monthly",
-		Amount:            10,
+		Amount: json.RawMessage{
+			12: 122,
+		},
 	}
 
-	routineTransactionPolicy, err := testQueries.CreateRoutineTransactionPolicy(context.Background(), arg)
+	routineTransactionPolicy, err := testQueries.CreateRTP(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, routineTransactionPolicy)
 
@@ -32,13 +35,13 @@ func TestCreateRoutineTransactionPolicy(t *testing.T) {
 func TestUpdateAccount(t *testing.T) {
 	routineTransactionPolicy := createRandomRoutineTransactionPolicy(t)
 
-	arg := UpdateRoutineTransactionPolicyParams{
+	arg := UpdateRTPParams{
 		ID:          routineTransactionPolicy.ID,
 		Name:        "Modified",
 		Description: "Hello im modified",
 	}
 
-	routineTransactionPolicy2, err := testQueries.UpdateRoutineTransactionPolicy(context.Background(), arg)
+	routineTransactionPolicy2, err := testQueries.UpdateRTP(context.Background(), arg)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, routineTransactionPolicy2)

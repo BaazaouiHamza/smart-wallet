@@ -1,32 +1,34 @@
--- name: CreateTransactionTriggerPolicy :one
+-- name: CreateTTP :one
 INSERT INTO transaction_trigger_policy (
   name,
   description,
   nym_id,
   targeted_balance,
-  amount
+  amount,
+  recipient
 ) VALUES (
-  $1,$2,$3,$4,$5
+  $1,$2,$3,$4,$5,$6
 ) RETURNING *;
 
--- name: UpdateTransactionTriggerPolicy :one
+-- name: UpdateTTP :one
 UPDATE transaction_trigger_policy 
 SET name = $2,
 description=$3,
 nym_id=$4,
 targeted_balance=$5,
-amount=$6
+amount=$6,
+recipient=$7
 WHERE id = $1
 RETURNING *;
 
--- name: GetTransactionTriggerPolicy :one
+-- name: GetTTP :one
 SELECT * FROM transaction_trigger_policy
 WHERE id = $1 LIMIT 1;
 
--- name: DeleteTransactionTriggerPolicy :exec
+-- name: DeleteTTP :exec
 DELETE FROM transaction_trigger_policy WHERE id = $1;
 
--- name: ListTransactionTriggerPolicies :many
+-- name: ListTTP :many
 SELECT * FROM transaction_trigger_policy WHERE nym_id = $1
 ORDER BY id
 LIMIT $2

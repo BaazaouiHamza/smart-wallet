@@ -8,33 +8,36 @@ import (
 	"encoding/json"
 )
 
-const createTransactionTriggerPolicy = `-- name: CreateTransactionTriggerPolicy :one
+const createTTP = `-- name: CreateTTP :one
 INSERT INTO transaction_trigger_policy (
   name,
   description,
   nym_id,
   targeted_balance,
-  amount
+  amount,
+  recipient
 ) VALUES (
-  $1,$2,$3,$4,$5
-) RETURNING id, name, description, nym_id, created_at, targeted_balance, amount
+  $1,$2,$3,$4,$5,$6
+) RETURNING id, name, description, nym_id, recipient, created_at, targeted_balance, amount
 `
 
-type CreateTransactionTriggerPolicyParams struct {
+type CreateTTPParams struct {
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
 	NymID           string          `json:"nym_id"`
 	TargetedBalance json.RawMessage `json:"targeted_balance"`
-	Amount          int32           `json:"amount"`
+	Amount          json.RawMessage `json:"amount"`
+	Recipient       string          `json:"recipient"`
 }
 
-func (q *Queries) CreateTransactionTriggerPolicy(ctx context.Context, arg CreateTransactionTriggerPolicyParams) (TransactionTriggerPolicy, error) {
-	row := q.db.QueryRowContext(ctx, createTransactionTriggerPolicy,
+func (q *Queries) CreateTTP(ctx context.Context, arg CreateTTPParams) (TransactionTriggerPolicy, error) {
+	row := q.db.QueryRowContext(ctx, createTTP,
 		arg.Name,
 		arg.Description,
 		arg.NymID,
 		arg.TargetedBalance,
 		arg.Amount,
+		arg.Recipient,
 	)
 	var i TransactionTriggerPolicy
 	err := row.Scan(
@@ -42,6 +45,7 @@ func (q *Queries) CreateTransactionTriggerPolicy(ctx context.Context, arg Create
 		&i.Name,
 		&i.Description,
 		&i.NymID,
+		&i.Recipient,
 		&i.CreatedAt,
 		&i.TargetedBalance,
 		&i.Amount,
@@ -49,28 +53,29 @@ func (q *Queries) CreateTransactionTriggerPolicy(ctx context.Context, arg Create
 	return i, err
 }
 
-const deleteTransactionTriggerPolicy = `-- name: DeleteTransactionTriggerPolicy :exec
+const deleteTTP = `-- name: DeleteTTP :exec
 DELETE FROM transaction_trigger_policy WHERE id = $1
 `
 
-func (q *Queries) DeleteTransactionTriggerPolicy(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteTransactionTriggerPolicy, id)
+func (q *Queries) DeleteTTP(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteTTP, id)
 	return err
 }
 
-const getTransactionTriggerPolicy = `-- name: GetTransactionTriggerPolicy :one
-SELECT id, name, description, nym_id, created_at, targeted_balance, amount FROM transaction_trigger_policy
+const getTTP = `-- name: GetTTP :one
+SELECT id, name, description, nym_id, recipient, created_at, targeted_balance, amount FROM transaction_trigger_policy
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetTransactionTriggerPolicy(ctx context.Context, id int64) (TransactionTriggerPolicy, error) {
-	row := q.db.QueryRowContext(ctx, getTransactionTriggerPolicy, id)
+func (q *Queries) GetTTP(ctx context.Context, id int64) (TransactionTriggerPolicy, error) {
+	row := q.db.QueryRowContext(ctx, getTTP, id)
 	var i TransactionTriggerPolicy
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.NymID,
+		&i.Recipient,
 		&i.CreatedAt,
 		&i.TargetedBalance,
 		&i.Amount,
@@ -78,21 +83,21 @@ func (q *Queries) GetTransactionTriggerPolicy(ctx context.Context, id int64) (Tr
 	return i, err
 }
 
-const listTransactionTriggerPolicies = `-- name: ListTransactionTriggerPolicies :many
-SELECT id, name, description, nym_id, created_at, targeted_balance, amount FROM transaction_trigger_policy WHERE nym_id = $1
+const listTTP = `-- name: ListTTP :many
+SELECT id, name, description, nym_id, recipient, created_at, targeted_balance, amount FROM transaction_trigger_policy WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3
 `
 
-type ListTransactionTriggerPoliciesParams struct {
+type ListTTPParams struct {
 	NymID  string `json:"nym_id"`
 	Limit  int32  `json:"limit"`
 	Offset int32  `json:"offset"`
 }
 
-func (q *Queries) ListTransactionTriggerPolicies(ctx context.Context, arg ListTransactionTriggerPoliciesParams) ([]TransactionTriggerPolicy, error) {
-	rows, err := q.db.QueryContext(ctx, listTransactionTriggerPolicies, arg.NymID, arg.Limit, arg.Offset)
+func (q *Queries) ListTTP(ctx context.Context, arg ListTTPParams) ([]TransactionTriggerPolicy, error) {
+	rows, err := q.db.QueryContext(ctx, listTTP, arg.NymID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +110,7 @@ func (q *Queries) ListTransactionTriggerPolicies(ctx context.Context, arg ListTr
 			&i.Name,
 			&i.Description,
 			&i.NymID,
+			&i.Recipient,
 			&i.CreatedAt,
 			&i.TargetedBalance,
 			&i.Amount,
@@ -122,34 +128,37 @@ func (q *Queries) ListTransactionTriggerPolicies(ctx context.Context, arg ListTr
 	return items, nil
 }
 
-const updateTransactionTriggerPolicy = `-- name: UpdateTransactionTriggerPolicy :one
+const updateTTP = `-- name: UpdateTTP :one
 UPDATE transaction_trigger_policy 
 SET name = $2,
 description=$3,
 nym_id=$4,
 targeted_balance=$5,
-amount=$6
+amount=$6,
+recipient=$7
 WHERE id = $1
-RETURNING id, name, description, nym_id, created_at, targeted_balance, amount
+RETURNING id, name, description, nym_id, recipient, created_at, targeted_balance, amount
 `
 
-type UpdateTransactionTriggerPolicyParams struct {
+type UpdateTTPParams struct {
 	ID              int64           `json:"id"`
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
 	NymID           string          `json:"nym_id"`
 	TargetedBalance json.RawMessage `json:"targeted_balance"`
-	Amount          int32           `json:"amount"`
+	Amount          json.RawMessage `json:"amount"`
+	Recipient       string          `json:"recipient"`
 }
 
-func (q *Queries) UpdateTransactionTriggerPolicy(ctx context.Context, arg UpdateTransactionTriggerPolicyParams) (TransactionTriggerPolicy, error) {
-	row := q.db.QueryRowContext(ctx, updateTransactionTriggerPolicy,
+func (q *Queries) UpdateTTP(ctx context.Context, arg UpdateTTPParams) (TransactionTriggerPolicy, error) {
+	row := q.db.QueryRowContext(ctx, updateTTP,
 		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.NymID,
 		arg.TargetedBalance,
 		arg.Amount,
+		arg.Recipient,
 	)
 	var i TransactionTriggerPolicy
 	err := row.Scan(
@@ -157,6 +166,7 @@ func (q *Queries) UpdateTransactionTriggerPolicy(ctx context.Context, arg Update
 		&i.Name,
 		&i.Description,
 		&i.NymID,
+		&i.Recipient,
 		&i.CreatedAt,
 		&i.TargetedBalance,
 		&i.Amount,
