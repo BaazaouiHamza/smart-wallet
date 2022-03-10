@@ -44,7 +44,7 @@ func run(ctx context.Context) (err error) {
 
 	var cfg smartWalletConfig
 	if err = config.GetConfigFromVault(ctx, "smart-wallet", &cfg); err != nil {
-		if fErr := config.GetConfigFromFile(&cfg, "config.json"); fErr != nil {
+		if fErr := config.GetConfigFromFile(&cfg, "../../config.json"); fErr != nil {
 			return multierr.Combine(
 				fmt.Errorf("could not read config from vault: %w", err),
 				fmt.Errorf("could not read config from file: %w", fErr),
@@ -53,7 +53,7 @@ func run(ctx context.Context) (err error) {
 	}
 
 	connectionString := fmt.Sprintf(
-		"postgress://%s:%s@%s:%d/%s",
+		"postgresql://%s:%s@%s:%d/%s",
 		cfg.DB.User, cfg.DB.Pass, cfg.DB.Host, cfg.DB.Port, cfg.DB.Name,
 	)
 

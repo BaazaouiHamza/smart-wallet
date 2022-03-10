@@ -61,6 +61,14 @@ type TTPRequestUri struct {
 	ID int `uri:"id" binding:"required,min=1"`
 }
 
+// @ID update-transaction-trigger-policy
+// @Tags transaction-trigger-policy
+// @Description Update a transaction trigger policy
+// @Param nym-id path string true "NymID"
+// @Param id path int true "ID"
+// @Param TTPRequest body TTPRequest true "Transation Trigger Policy"
+// @Success 200
+// @Router /api/:nym-id/transaction-trigger-policy/:id [PUT]
 func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
 	var req TTPRequest
 	var reqUri TTPRequestUri
@@ -78,6 +86,7 @@ func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 		Name:            req.Name,
 		Description:     req.Description,
 		NymID:           pk,
+		Recipient:       req.Recipient,
 		Amount:          req.Amount,
 		TargetedBalance: req.TargetedBalance,
 	}
@@ -90,6 +99,13 @@ func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 	c.Status(http.StatusNoContent)
 }
 
+// @ID delete-transaction-trigger-policy
+// @Tags transaction-trigger-policy
+// @Description Delete a transaction trigger policy
+// @Param nym-id path string true "NymID"
+// @Param id path int true "ID"
+// @Success 200
+// @Router /api/:nym-id/transaction-trigger-policy/:id [DELETE]
 func (s *Server) deleteTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
 	var reqUri TTPRequestUri
 	if err := c.BindUri(&reqUri); err != nil {
@@ -104,6 +120,13 @@ func (s *Server) deleteTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 	c.Status(http.StatusNoContent)
 }
 
+// @ID get-transaction-trigger-policy
+// @Tags transaction-trigger-policy
+// @Description Get a transaction trigger policy
+// @Param nym-id path string true "NymID"
+// @Param id path int true "ID"
+// @Success 200
+// @Router /api/:nym-id/transaction-trigger-policy/:id [GET]
 func (s *Server) getTransactionTriggerPolicyById(c *gin.Context, pk identity.PublicKey) {
 	var reqUri TTPRequestUri
 
@@ -137,6 +160,13 @@ type listTransactionTriggerPolicies struct {
 	ItemsPerPage int `form:"itemsPerPage" binding:"required,min=5,max=10"`
 }
 
+// @ID list-transaction-trigger-policy
+// @Tags transaction-trigger-policy
+// @Description Get all transaction trigger policies
+// @Param nym-id path string true "NymID"
+// @Param _ query listTransactionTriggerPolicies false "comment"
+// @Success 200
+// @Router /api/:nym-id/transaction-trigger-policy [GET]
 func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.PublicKey) {
 	var reqForm listTransactionTriggerPolicies
 	if err := c.ShouldBindQuery(&reqForm); err != nil {
@@ -144,7 +174,7 @@ func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.Publ
 		return
 	}
 
-	rtps, count, err := s.service.ListTransactionTriggerPolicies(
+	rtps, err := s.service.ListTransactionTriggerPolicies(
 		prospercontext.JoinContexts(c), pk, reqForm.Page, reqForm.ItemsPerPage,
 	)
 	if err != nil {
@@ -152,5 +182,5 @@ func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.Publ
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": rtps, "total": count})
+	c.JSON(http.StatusOK, gin.H{"data": rtps})
 }

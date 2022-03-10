@@ -1,3 +1,10 @@
 {
-  "port": 8080
+ "db" : {
+  "user" : "postgres",
+  "pass":"07719811gg",
+  "host":"localhost",
+  "name":"pfe?sslmode=disable",
+  "port": 5432
+  },
+  "port":8080
 }

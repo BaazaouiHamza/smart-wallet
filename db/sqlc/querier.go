@@ -7,19 +7,19 @@ import (
 )
 
 type Querier interface {
-	CreateRoutineTransactionPolicy(ctx context.Context, arg CreateRoutineTransactionPolicyParams) (RoutineTransactionPolicy, error)
-	CreateTransactionTriggerPolicy(ctx context.Context, arg CreateTransactionTriggerPolicyParams) (TransactionTriggerPolicy, error)
-	DeleteRoutineTransactionPolicy(ctx context.Context, id int64) error
-	DeleteTransactionTriggerPolicy(ctx context.Context, id int64) error
+	CreateRTP(ctx context.Context, arg CreateRTPParams) (RoutineTransactionPolicy, error)
+	CreateTTP(ctx context.Context, arg CreateTTPParams) (TransactionTriggerPolicy, error)
+	DeleteRTP(ctx context.Context, id int64) error
+	DeleteTTP(ctx context.Context, id int64) error
 	DeleteUserPolicy(ctx context.Context, id int64) error
-	GetRoutineTransactionPolicy(ctx context.Context, id int64) (RoutineTransactionPolicy, error)
-	GetTransactionTriggerPolicy(ctx context.Context, id int64) (TransactionTriggerPolicy, error)
+	GetRTP(ctx context.Context, id int64) (RoutineTransactionPolicy, error)
+	GetTTP(ctx context.Context, id int64) (TransactionTriggerPolicy, error)
 	GetUserPolicy(ctx context.Context, id int64) (GetUserPolicyRow, error)
-	ListRoutineTransactionPolicies(ctx context.Context, arg ListRoutineTransactionPoliciesParams) ([]RoutineTransactionPolicy, error)
-	ListTransactionTriggerPolicies(ctx context.Context, arg ListTransactionTriggerPoliciesParams) ([]TransactionTriggerPolicy, error)
+	ListRTP(ctx context.Context, arg ListRTPParams) ([]RoutineTransactionPolicy, error)
+	ListTTP(ctx context.Context, arg ListTTPParams) ([]TransactionTriggerPolicy, error)
 	ListUserPolicies(ctx context.Context, arg ListUserPoliciesParams) ([]UserPolicy, error)
-	UpdateRoutineTransactionPolicy(ctx context.Context, arg UpdateRoutineTransactionPolicyParams) (RoutineTransactionPolicy, error)
-	UpdateTransactionTriggerPolicy(ctx context.Context, arg UpdateTransactionTriggerPolicyParams) (TransactionTriggerPolicy, error)
+	UpdateRTP(ctx context.Context, arg UpdateRTPParams) (RoutineTransactionPolicy, error)
+	UpdateTTP(ctx context.Context, arg UpdateTTPParams) (TransactionTriggerPolicy, error)
 }
 
 var _ Querier = (*Queries)(nil)

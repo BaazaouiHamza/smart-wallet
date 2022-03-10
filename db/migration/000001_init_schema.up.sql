@@ -3,6 +3,7 @@ CREATE TABLE "user_policy" (
   "name" varchar NOT NULL,
   "description" varchar NOT NULL,
   "nym_id" varchar NOT NULL,
+  "recipient" varchar NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
@@ -10,12 +11,12 @@ CREATE TABLE "routine_transaction_policy" (
   "schedule_start_date" date NOT NULL,
   "schedule_end_date" date NOT NULL,
   "frequency" varchar NOT NULL,
-  "amount" int NOT NULL
+  "amount" jsonb NOT NULL
 )INHERITS("user_policy");
 
 CREATE TABLE "transaction_trigger_policy" (
   "targeted_balance" jsonb NOT NULL,
-  "amount" int NOT NULL
+  "amount" jsonb NOT NULL
 )INHERITS("user_policy");
 
 CREATE TABLE "transaction" (

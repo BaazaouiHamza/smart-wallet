@@ -21,15 +21,38 @@ definitions:
     - targetedBalance
     type: object
   types.Balance:
-    additionalProperties: {"type": "string", "enum": ["Contributor", "User"]}
+    additionalProperties:
+      type: integer
     type: object
 info:
   contact: {}
-  description: ProsperUs Smart wallet
-  title: Smart Wallet
-  version: 0.0.0
 paths:
   /api/:nym-id/transaction-trigger-policy:
+    get:
+      description: Get all transaction trigger policies
+      operationId: list-transaction-trigger-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - in: query
+        maximum: 10
+        minimum: 5
+        name: itemsPerPage
+        required: true
+        type: integer
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: ""
+      tags:
+      - transaction-trigger-policy
     post:
       description: Create a transaction trigger policy
       operationId: create-transaction-trigger-policy
@@ -47,6 +70,70 @@ paths:
           $ref: '#/definitions/api.TTPRequest'
       responses:
         "201":
+          description: ""
+      tags:
+      - transaction-trigger-policy
+  /api/:nym-id/transaction-trigger-policy/:id:
+    delete:
+      description: Delete a transaction trigger policy
+      operationId: delete-transaction-trigger-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: ""
+      tags:
+      - transaction-trigger-policy
+    get:
+      description: Get a transaction trigger policy
+      operationId: get-transaction-trigger-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: ""
+      tags:
+      - transaction-trigger-policy
+    put:
+      description: Update a transaction trigger policy
+      operationId: update-transaction-trigger-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Transation Trigger Policy
+        in: body
+        name: TTPRequest
+        required: true
+        schema:
+          $ref: '#/definitions/api.TTPRequest'
+      responses:
+        "200":
           description: ""
       tags:
       - transaction-trigger-policy

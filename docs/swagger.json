@@ -1,13 +1,46 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "ProsperUs Smart wallet",
-        "title": "Smart Wallet",
-        "contact": {},
-        "version": "0.0.0"
+        "contact": {}
     },
     "paths": {
         "/api/:nym-id/transaction-trigger-policy": {
+            "get": {
+                "description": "Get all transaction trigger policies",
+                "tags": [
+                    "transaction-trigger-policy"
+                ],
+                "operationId": "list-transaction-trigger-policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NymID",
+                        "name": "nym-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "maximum": 10,
+                        "minimum": 5,
+                        "type": "integer",
+                        "name": "itemsPerPage",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                }
+            },
             "post": {
                 "description": "Create a transaction trigger policy",
                 "tags": [
@@ -34,6 +67,101 @@
                 ],
                 "responses": {
                     "201": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/:nym-id/transaction-trigger-policy/:id": {
+            "get": {
+                "description": "Get a transaction trigger policy",
+                "tags": [
+                    "transaction-trigger-policy"
+                ],
+                "operationId": "get-transaction-trigger-policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NymID",
+                        "name": "nym-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "description": "Update a transaction trigger policy",
+                "tags": [
+                    "transaction-trigger-policy"
+                ],
+                "operationId": "update-transaction-trigger-policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NymID",
+                        "name": "nym-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Transation Trigger Policy",
+                        "name": "TTPRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.TTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a transaction trigger policy",
+                "tags": [
+                    "transaction-trigger-policy"
+                ],
+                "operationId": "delete-transaction-trigger-policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NymID",
+                        "name": "nym-id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
                         "description": ""
                     }
                 }
@@ -73,7 +201,9 @@
         },
         "types.Balance": {
             "type": "object",
-            "additionalProperties": {"type": "string", "enum": ["Contributor", "User"]}
+            "additionalProperties": {
+                "type": "integer"
+            }
         }
     }
 }

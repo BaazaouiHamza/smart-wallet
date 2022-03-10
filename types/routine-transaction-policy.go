@@ -7,6 +7,7 @@ import (
 )
 
 type RoutineTransactionPolicy struct {
+	ID                int
 	Name              string
 	Description       string
 	NymID             identity.PublicKey

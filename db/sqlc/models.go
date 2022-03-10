@@ -8,15 +8,16 @@ import (
 )
 
 type RoutineTransactionPolicy struct {
-	ID                int64     `json:"id"`
-	Name              string    `json:"name"`
-	Description       string    `json:"description"`
-	NymID             string    `json:"nym_id"`
-	CreatedAt         time.Time `json:"created_at"`
-	ScheduleStartDate time.Time `json:"schedule_start_date"`
-	ScheduleEndDate   time.Time `json:"schedule_end_date"`
-	Frequency         string    `json:"frequency"`
-	Amount            int32     `json:"amount"`
+	ID                int64           `json:"id"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	NymID             string          `json:"nym_id"`
+	Recipient         string          `json:"recipient"`
+	CreatedAt         time.Time       `json:"created_at"`
+	ScheduleStartDate time.Time       `json:"schedule_start_date"`
+	ScheduleEndDate   time.Time       `json:"schedule_end_date"`
+	Frequency         string          `json:"frequency"`
+	Amount            json.RawMessage `json:"amount"`
 }
 
 type Transaction struct {
@@ -32,9 +33,10 @@ type TransactionTriggerPolicy struct {
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
 	NymID           string          `json:"nym_id"`
+	Recipient       string          `json:"recipient"`
 	CreatedAt       time.Time       `json:"created_at"`
 	TargetedBalance json.RawMessage `json:"targeted_balance"`
-	Amount          int32           `json:"amount"`
+	Amount          json.RawMessage `json:"amount"`
 }
 
 type UserPolicy struct {
@@ -42,5 +44,6 @@ type UserPolicy struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	NymID       string    `json:"nym_id"`
+	Recipient   string    `json:"recipient"`
 	CreatedAt   time.Time `json:"created_at"`
 }
