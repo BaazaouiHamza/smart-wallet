@@ -20,12 +20,46 @@ definitions:
     - recipient
     - targetedBalance
     type: object
+  api.listTransactionTriggerPoliciesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/types.TransactionTriggerPolicy'
+        type: array
+      total:
+        type: integer
+    type: object
   types.Balance:
-    additionalProperties:
-      type: integer
+    additionalProperties: {"type": "string", "enum": ["Contributor", "User"]}
+    type: object
+  types.TransactionTriggerPolicy:
+    properties:
+      amount:
+        $ref: '#/definitions/types.Balance'
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      nymID:
+        items:
+          type: integer
+        type: array
+      recipient:
+        items:
+          type: integer
+        type: array
+      targetedBalance:
+        $ref: '#/definitions/types.Balance'
     type: object
 info:
   contact: {}
+  description: ProsperUs Smart wallet
+  title: Smart Wallet
+  version: 0.0.0
 paths:
   /api/:nym-id/transaction-trigger-policy:
     get:
@@ -38,19 +72,18 @@ paths:
         required: true
         type: string
       - in: query
-        maximum: 10
-        minimum: 5
         name: itemsPerPage
         required: true
         type: integer
       - in: query
-        minimum: 1
         name: page
         required: true
         type: integer
       responses:
         "200":
-          description: ""
+          description: OK
+          schema:
+            $ref: '#/definitions/api.listTransactionTriggerPoliciesResponse'
       tags:
       - transaction-trigger-policy
     post:
@@ -89,7 +122,7 @@ paths:
         required: true
         type: integer
       responses:
-        "200":
+        "204":
           description: ""
       tags:
       - transaction-trigger-policy
@@ -109,7 +142,9 @@ paths:
         type: integer
       responses:
         "200":
-          description: ""
+          description: OK
+          schema:
+            $ref: '#/definitions/types.TransactionTriggerPolicy'
       tags:
       - transaction-trigger-policy
     put:

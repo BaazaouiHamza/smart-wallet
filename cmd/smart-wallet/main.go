@@ -13,7 +13,7 @@ import (
 	"git.digitus.me/library/prosper-kit/discovery"
 	"git.digitus.me/library/prosper-kit/server"
 	"git.digitus.me/pfe/smart-wallet/api"
-	"git.digitus.me/pfe/smart-wallet/db"
+	"git.digitus.me/pfe/smart-wallet/repository"
 	"go.elastic.co/apm/module/apmhttp"
 	"go.elastic.co/apm/module/apmsql"
 	_ "go.elastic.co/apm/module/apmsql/pq"
@@ -44,7 +44,7 @@ func run(ctx context.Context) (err error) {
 
 	var cfg smartWalletConfig
 	if err = config.GetConfigFromVault(ctx, "smart-wallet", &cfg); err != nil {
-		if fErr := config.GetConfigFromFile(&cfg, "../../config.json"); fErr != nil {
+		if fErr := config.GetConfigFromFile(&cfg, "config.json"); fErr != nil {
 			return multierr.Combine(
 				fmt.Errorf("could not read config from vault: %w", err),
 				fmt.Errorf("could not read config from file: %w", fErr),
@@ -57,8 +57,11 @@ func run(ctx context.Context) (err error) {
 		cfg.DB.User, cfg.DB.Pass, cfg.DB.Host, cfg.DB.Port, cfg.DB.Name,
 	)
 
-	if err = db.MigrateUp(connectionString); err != nil {
-		return fmt.Errorf("migration failed: %w", err)
+	if err = repository.MigrateUp(connectionString); err != nil {
+		logger.Error(
+			"no migration",
+			zap.Error(fmt.Errorf("migration failed: %w", err)),
+		)
 	}
 
 	var db *sql.DB
@@ -99,7 +102,9 @@ func run(ctx context.Context) (err error) {
 	}), discoverer)
 
 	var jwsGetter *authentication.UAAJWSGetter
-	jwsGetter, err = authentication.NewUAAJWSGetter(ctx, authentication.UAAJWSGetterWithClient(client))
+	jwsGetter, err = authentication.NewUAAJWSGetter(
+		ctx, authentication.UAAJWSGetterWithClient(client),
+	)
 	if err != nil {
 		return
 	}

@@ -1,7 +1,10 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "ProsperUs Smart wallet",
+        "title": "Smart Wallet",
+        "contact": {},
+        "version": "0.0.0"
     },
     "paths": {
         "/api/:nym-id/transaction-trigger-policy": {
@@ -20,15 +23,12 @@
                         "required": true
                     },
                     {
-                        "maximum": 10,
-                        "minimum": 5,
                         "type": "integer",
                         "name": "itemsPerPage",
                         "in": "query",
                         "required": true
                     },
                     {
-                        "minimum": 1,
                         "type": "integer",
                         "name": "page",
                         "in": "query",
@@ -37,7 +37,10 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.listTransactionTriggerPoliciesResponse"
+                        }
                     }
                 }
             },
@@ -97,7 +100,10 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.TransactionTriggerPolicy"
+                        }
                     }
                 }
             },
@@ -161,7 +167,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "204": {
                         "description": ""
                     }
                 }
@@ -199,10 +205,57 @@
                 }
             }
         },
+        "api.listTransactionTriggerPoliciesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.TransactionTriggerPolicy"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "types.Balance": {
             "type": "object",
-            "additionalProperties": {
-                "type": "integer"
+            "additionalProperties": {"type": "string", "enum": ["Contributor", "User"]}
+        },
+        "types.TransactionTriggerPolicy": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "$ref": "#/definitions/types.Balance"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nymID": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "recipient": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "targetedBalance": {
+                    "$ref": "#/definitions/types.Balance"
+                }
             }
         }
     }

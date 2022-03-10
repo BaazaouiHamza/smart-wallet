@@ -1,5 +1,5 @@
 -- name: CreateTTP :one
-INSERT INTO transaction_trigger_policy (
+INSERT INTO transaction_trigger_policies (
   name,
   description,
   nym_id,
@@ -11,7 +11,7 @@ INSERT INTO transaction_trigger_policy (
 ) RETURNING *;
 
 -- name: UpdateTTP :one
-UPDATE transaction_trigger_policy 
+UPDATE transaction_trigger_policies 
 SET name = $2,
 description=$3,
 nym_id=$4,
@@ -22,14 +22,14 @@ WHERE id = $1
 RETURNING *;
 
 -- name: GetTTP :one
-SELECT * FROM transaction_trigger_policy
+SELECT * FROM transaction_trigger_policies
 WHERE id = $1 LIMIT 1;
 
 -- name: DeleteTTP :exec
-DELETE FROM transaction_trigger_policy WHERE id = $1;
+DELETE FROM transaction_trigger_policies WHERE id = $1;
 
 -- name: ListTTP :many
-SELECT * FROM transaction_trigger_policy WHERE nym_id = $1
+SELECT * FROM transaction_trigger_policies WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3;

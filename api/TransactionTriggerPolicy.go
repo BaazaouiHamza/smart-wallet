@@ -104,7 +104,7 @@ func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 // @Description Delete a transaction trigger policy
 // @Param nym-id path string true "NymID"
 // @Param id path int true "ID"
-// @Success 200
+// @Success 204
 // @Router /api/:nym-id/transaction-trigger-policy/:id [DELETE]
 func (s *Server) deleteTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
 	var reqUri TTPRequestUri
@@ -125,7 +125,7 @@ func (s *Server) deleteTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 // @Description Get a transaction trigger policy
 // @Param nym-id path string true "NymID"
 // @Param id path int true "ID"
-// @Success 200
+// @Success 200 {object} types.TransactionTriggerPolicy
 // @Router /api/:nym-id/transaction-trigger-policy/:id [GET]
 func (s *Server) getTransactionTriggerPolicyById(c *gin.Context, pk identity.PublicKey) {
 	var reqUri TTPRequestUri
@@ -160,12 +160,17 @@ type listTransactionTriggerPolicies struct {
 	ItemsPerPage int `form:"itemsPerPage" binding:"required,min=5,max=10"`
 }
 
+type listTransactionTriggerPoliciesResponse struct {
+	Data  []types.TransactionTriggerPolicy `json:"data"`
+	Total int                              `json:"total"`
+}
+
 // @ID list-transaction-trigger-policy
 // @Tags transaction-trigger-policy
 // @Description Get all transaction trigger policies
 // @Param nym-id path string true "NymID"
 // @Param _ query listTransactionTriggerPolicies false "comment"
-// @Success 200
+// @Success 200 {object} listTransactionTriggerPoliciesResponse
 // @Router /api/:nym-id/transaction-trigger-policy [GET]
 func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.PublicKey) {
 	var reqForm listTransactionTriggerPolicies
@@ -182,5 +187,9 @@ func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.Publ
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": rtps})
+	c.JSON(http.StatusOK, listTransactionTriggerPoliciesResponse{
+		Data: rtps,
+		// TODO: return total
+		Total: 0,
+	})
 }

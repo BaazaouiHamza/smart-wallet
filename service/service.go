@@ -3,25 +3,20 @@ package service
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"errors"
+	"fmt"
 
-	db "git.digitus.me/pfe/smart-wallet/db/sqlc"
+	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
-	ptclTypes "git.digitus.me/prosperus/protocol/types"
 )
 
 type SmartWallet interface {
-	// CreateRoutineTransactionPolicy(context.Context, types.RoutineTransactionPolicy, identity.PublicKey) error
-	// UpdateRoutineTransactionPolicy(context.Context, types.RoutineTransactionPolicy) error
-	// GetRoutineTransactionPolicy(context.Context, int) (*types.RoutineTransactionPolicy, error)
-	// ListRoutineTransactionPolicies(
-	// 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
-	// ) ([]types.RoutineTransactionPolicy, int, error)
-
 	CreateTransactionTriggerPolicy(context.Context, types.TransactionTriggerPolicy) error
 	UpdateTransactionTriggerPolicy(context.Context, types.TransactionTriggerPolicy) error
-	GetTransactionTriggerPolicy(context.Context, identity.PublicKey, int) (*types.TransactionTriggerPolicy, error)
+	GetTransactionTriggerPolicy(
+		context.Context, identity.PublicKey, int,
+	) (*types.TransactionTriggerPolicy, error)
 	ListTransactionTriggerPolicies(
 		ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 	) ([]types.TransactionTriggerPolicy, error)
@@ -32,52 +27,41 @@ type SmartWallet interface {
 	IsUserError(error) bool
 }
 
-// func NewSmartWallet(db *sql.DB) SmartWallet {
-// 	return &repoSvc{
-// 		Queries: New(db),
-// 		db:      db,
-// 	}
-// }
+var _ SmartWallet = (*SmartWalletStd)(nil)
 
-type repoSvc struct {
-	*db.Queries
-	db *sql.DB
-}
+type SmartWalletStd struct{ DB *sql.DB }
 
-func (r *repoSvc) CreateTransactionTriggerPolicy(c context.Context, ttp types.TransactionTriggerPolicy) error {
-	balance, err := ttp.TargetedBalance.MarshalJSON()
+func (r *SmartWalletStd) CreateTransactionTriggerPolicy(
+	ctx context.Context, ttp types.TransactionTriggerPolicy,
+) error {
+	balance, amount, err := marshalBoth(ttp.TargetedBalance, ttp.Amount)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not marshal balances: %w", err)
 	}
-	amount, err := ttp.Amount.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	arg := db.CreateTTPParams{
+
+	if _, err := repository.New(r.DB).CreateTTP(ctx, repository.CreateTTPParams{
 		NymID:           ttp.NymID.String(),
 		Name:            ttp.Name,
 		Recipient:       ttp.Recipient.String(),
 		Description:     ttp.Description,
 		TargetedBalance: balance,
 		Amount:          amount,
+	}); err != nil {
+		return fmt.Errorf("could not insert TTP: %w", err)
 	}
-	_, err = r.CreateTTP(c, arg)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
-func (r *repoSvc) UpdateTransactionTriggerPolicy(c context.Context, ttp types.TransactionTriggerPolicy) error {
-	balance, err := ttp.TargetedBalance.MarshalJSON()
+func (r *SmartWalletStd) UpdateTransactionTriggerPolicy(
+	ctx context.Context, ttp types.TransactionTriggerPolicy,
+) error {
+	balance, amount, err := marshalBoth(ttp.TargetedBalance, ttp.Amount)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not unmarshal balances: %w", err)
 	}
-	amount, err := ttp.Amount.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	arg := db.UpdateTTPParams{
+
+	arg := repository.UpdateTTPParams{
 		ID:              int64(ttp.ID),
 		NymID:           ttp.NymID.String(),
 		Recipient:       ttp.Recipient.String(),
@@ -86,80 +70,87 @@ func (r *repoSvc) UpdateTransactionTriggerPolicy(c context.Context, ttp types.Tr
 		TargetedBalance: balance,
 		Amount:          amount,
 	}
-	_, err = r.UpdateTTP(c, arg)
-	if err != nil {
-		return err
+
+	if _, err := repository.New(r.DB).UpdateTTP(ctx, arg); err != nil {
+		return fmt.Errorf("could not update TTP '%d': %w", ttp.ID, err)
 	}
+
 	return nil
 }
 
-func (r *repoSvc) GetTransactionTriggerPolicy(c context.Context, pk identity.PublicKey, id int) (*types.TransactionTriggerPolicy, error) {
-	ttp, err := r.GetTTP(c, int64(id))
+func (r *SmartWalletStd) GetTransactionTriggerPolicy(
+	ctx context.Context, pk identity.PublicKey, id int,
+) (*types.TransactionTriggerPolicy, error) {
+	ttp, err := repository.New(r.DB).GetTTP(ctx, int64(id))
 	if err != nil {
 		return nil, err
 	}
-	var balance map[ptclTypes.UnitID]int64
-	err = json.Unmarshal(ttp.TargetedBalance, &balance)
+
+	balance, amount, err := unmarshalBoth(ttp.TargetedBalance, ttp.Amount)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not unmarshal balances: %w", err)
 	}
-	var amount map[ptclTypes.UnitID]int64
-	err = json.Unmarshal(ttp.TargetedBalance, &amount)
-	if err != nil {
-		return nil, err
-	}
-	Ttp := types.TransactionTriggerPolicy{
+
+	return &types.TransactionTriggerPolicy{
 		Name:            ttp.Name,
 		Description:     ttp.Description,
 		NymID:           pk,
 		TargetedBalance: balance,
 		Amount:          amount,
-	}
-	return &Ttp, nil
-
+	}, nil
 }
 
-func (r *repoSvc) ListTransactionTriggerPolicies(
-	c context.Context, nym identity.PublicKey, page, itemsPerPage int,
+func (r *SmartWalletStd) ListTransactionTriggerPolicies(
+	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.TransactionTriggerPolicy, error) {
-	arg := db.ListTTPParams{
+	ttps, err := repository.New(r.DB).ListTTP(ctx, repository.ListTTPParams{
 		NymID:  nym.String(),
 		Limit:  int32(itemsPerPage),
 		Offset: (int32(page) - 1) * int32(itemsPerPage),
-	}
-	ttps, err := r.ListTTP(c, arg)
+	})
 	if err != nil {
 		return nil, err
 	}
-	var amount []map[ptclTypes.UnitID]int64
-	var balance []map[ptclTypes.UnitID]int64
-	var Ttps []types.TransactionTriggerPolicy
-	for i, ttp := range ttps {
 
-		err = json.Unmarshal(ttp.TargetedBalance, &balance[i])
+	ts := make([]types.TransactionTriggerPolicy, len(ttps))
+
+	for _, ttp := range ttps {
+		balance, amount, err := unmarshalBoth(ttp.TargetedBalance, ttp.Amount)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not unmarshal balances: %w", err)
 		}
-		err = json.Unmarshal(ttp.TargetedBalance, &amount[i])
-		if err != nil {
-			return nil, err
-		}
-		Ttps[i] = types.TransactionTriggerPolicy{
+
+		ts = append(ts, types.TransactionTriggerPolicy{
 			Name:            ttp.Name,
 			Description:     ttp.Description,
 			NymID:           nym,
-			TargetedBalance: balance[i],
-			Amount:          amount[i],
-		}
+			TargetedBalance: balance,
+			Amount:          amount,
+		})
 	}
 
-	return Ttps, nil
+	return ts, nil
 
 }
-func (r *repoSvc) DeletePolicy(c context.Context, pk identity.PublicKey, id int) error {
-	err := r.Queries.DeleteUserPolicy(c, int64(id))
-	if err != nil {
-		return err
+
+func (r *SmartWalletStd) DeletePolicy(ctx context.Context, pk identity.PublicKey, id int) error {
+	if err := repository.New(r.DB).DeleteUserPolicy(ctx, int64(id)); err != nil {
+		return fmt.Errorf("could not delete policy %d: %w", id, err)
 	}
+
 	return nil
+}
+
+func (r *SmartWalletStd) IsNotFoundError(err error) bool {
+	return errors.Is(err, sql.ErrNoRows)
+}
+
+type userError struct{ err error }
+
+func (uErr userError) Error() string { return uErr.err.Error() }
+func (uErr userError) Unwrap() error { return uErr.err }
+
+func (r *SmartWalletStd) IsUserError(err error) bool {
+	var uErr userError
+	return errors.As(err, &uErr)
 }

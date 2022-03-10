@@ -20,29 +20,13 @@ func checkNymID(
 		}
 
 		permission, ok := middleware.GetWalletPermission(c, *pk)
-		if !ok || permissionLevel == middleware.ViewerPermissionLevel || permission != permissionLevel {
+		if !ok ||
+			permissionLevel == middleware.ViewerPermissionLevel ||
+			permission != permissionLevel {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "insufficient priviledge"})
 			return
 		}
 
 		hn(c, *pk)
-	}
-}
-
-func checkNymID_(permissionLevel string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		pk, err := identity.PublicKeyFromString(c.Param("nym-id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid NymID"})
-			return
-		}
-
-		permission, ok := middleware.GetWalletPermission(c, *pk)
-		if !ok || permission != permissionLevel {
-			c.JSON(http.StatusBadRequest, gin.H{"message": "insufficient priviledge"})
-			return
-		}
-
-		c.Set("pk", *pk)
 	}
 }

@@ -1,5 +1,5 @@
 -- name: CreateRTP :one
-INSERT INTO routine_transaction_policy (
+INSERT INTO routine_transaction_policies (
   name,
   description,
   nym_id,
@@ -14,7 +14,7 @@ INSERT INTO routine_transaction_policy (
 
 
 -- name: UpdateRTP :one
-UPDATE routine_transaction_policy 
+UPDATE routine_transaction_policies 
 SET name = $2,
 description=$3,
 nym_id=$4,
@@ -27,14 +27,14 @@ WHERE id = $1
 RETURNING *;
 
 -- name: GetRTP :one
-SELECT * FROM routine_transaction_policy
+SELECT * FROM routine_transaction_policies
 WHERE id = $1 LIMIT 1;
 
 -- name: DeleteRTP :exec
-DELETE FROM routine_transaction_policy WHERE id = $1;
+DELETE FROM routine_transaction_policies WHERE id = $1;
 
 -- name: ListRTP :many
-SELECT * FROM routine_transaction_policy WHERE nym_id = $1
+SELECT * FROM routine_transaction_policies WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3;

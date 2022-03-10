@@ -1,5 +1,5 @@
-PROJECT_NAME := "uaa"
-PKG := "git.digitus.me/prosperus/$(PROJECT_NAME)"
+PROJECT_NAME := "smart-wallet"
+PKG := "git.digitus.me/pfe/$(PROJECT_NAME)"
 PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
 GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
 
@@ -20,14 +20,14 @@ pre-build:
 	$(MAKE) swagger
 
 build:
-	@go build -o uaa\
+	@go build -o smart-wallet\
 			  -ldflags "-w\
 	                    -s\
 						-X '${PKG}/version.gitCommit=$$(git rev-parse HEAD)'\
 						-X '${PKG}/version.buildTime=$$(date)'\
 						-X '${PKG}/version.goVersion=$$(go version)'\
 						-X '${PKG}/version.tag=$$(git describe --tags)'"\
-			  cmd/uaa/main.go
+			  cmd/smart-wallet/main.go
 
 test:
 	@go test -short ${PKG_LIST}
