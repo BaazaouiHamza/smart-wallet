@@ -34,7 +34,7 @@ WHERE id = $1 LIMIT 1;
 DELETE FROM routine_transaction_policies WHERE id = $1;
 
 -- name: ListRTP :many
-SELECT * FROM routine_transaction_policies WHERE nym_id = $1
+SELECT *, count(*) OVER() AS full_count FROM routine_transaction_policies WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3;

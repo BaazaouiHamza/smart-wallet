@@ -14,6 +14,7 @@ import (
 	"git.digitus.me/library/prosper-kit/server"
 	"git.digitus.me/pfe/smart-wallet/api"
 	"git.digitus.me/pfe/smart-wallet/repository"
+	"git.digitus.me/pfe/smart-wallet/service"
 	"go.elastic.co/apm/module/apmhttp"
 	"go.elastic.co/apm/module/apmsql"
 	_ "go.elastic.co/apm/module/apmsql/pq"
@@ -44,7 +45,7 @@ func run(ctx context.Context) (err error) {
 
 	var cfg smartWalletConfig
 	if err = config.GetConfigFromVault(ctx, "smart-wallet", &cfg); err != nil {
-		if fErr := config.GetConfigFromFile(&cfg, "config.json"); fErr != nil {
+		if fErr := config.GetConfigFromFile(&cfg, "../../config.json"); fErr != nil {
 			return multierr.Combine(
 				fmt.Errorf("could not read config from vault: %w", err),
 				fmt.Errorf("could not read config from file: %w", fErr),
@@ -108,9 +109,9 @@ func run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-
+	var svc = service.NewSmartWallet(db)
 	engine := server.ReasonableEngine(logger)
-	api.NewServer(nil, engine, jwsGetter)
+	api.NewServer(svc, engine, jwsGetter)
 
 	consulHost := cfg.ConsulAddress
 	if consulHost == "" {

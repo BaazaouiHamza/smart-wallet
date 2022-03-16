@@ -95,7 +95,7 @@ func (q *Queries) GetRTP(ctx context.Context, id int64) (RoutineTransactionPolic
 }
 
 const listRTP = `-- name: ListRTP :many
-SELECT id, name, description, nym_id, recipient, created_at, schedule_start_date, schedule_end_date, frequency, amount FROM routine_transaction_policies WHERE nym_id = $1
+SELECT id, name, description, nym_id, recipient, created_at, schedule_start_date, schedule_end_date, frequency, amount, count(*) OVER() AS full_count FROM routine_transaction_policies WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3
@@ -107,15 +107,29 @@ type ListRTPParams struct {
 	Offset int32  `json:"offset"`
 }
 
-func (q *Queries) ListRTP(ctx context.Context, arg ListRTPParams) ([]RoutineTransactionPolicy, error) {
+type ListRTPRow struct {
+	ID                int64           `json:"id"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	NymID             string          `json:"nym_id"`
+	Recipient         string          `json:"recipient"`
+	CreatedAt         time.Time       `json:"created_at"`
+	ScheduleStartDate time.Time       `json:"schedule_start_date"`
+	ScheduleEndDate   time.Time       `json:"schedule_end_date"`
+	Frequency         string          `json:"frequency"`
+	Amount            json.RawMessage `json:"amount"`
+	FullCount         int64           `json:"full_count"`
+}
+
+func (q *Queries) ListRTP(ctx context.Context, arg ListRTPParams) ([]ListRTPRow, error) {
 	rows, err := q.db.QueryContext(ctx, listRTP, arg.NymID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []RoutineTransactionPolicy{}
+	items := []ListRTPRow{}
 	for rows.Next() {
-		var i RoutineTransactionPolicy
+		var i ListRTPRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -127,6 +141,7 @@ func (q *Queries) ListRTP(ctx context.Context, arg ListRTPParams) ([]RoutineTran
 			&i.ScheduleEndDate,
 			&i.Frequency,
 			&i.Amount,
+			&i.FullCount,
 		); err != nil {
 			return nil, err
 		}

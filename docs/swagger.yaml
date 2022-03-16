@@ -1,4 +1,40 @@
 definitions:
+  api.RTPRequest:
+    properties:
+      amount:
+        $ref: '#/definitions/types.Balance'
+      description:
+        type: string
+      frequency:
+        enum:
+        - DAILY
+        - MONTHLY
+        - WEEKLY
+        type: string
+      name:
+        type: string
+      nym_id:
+        items:
+          type: integer
+        type: array
+      recipient:
+        items:
+          type: integer
+        type: array
+      schedule_end_date:
+        type: string
+      schedule_start_date:
+        type: string
+    required:
+    - amount
+    - description
+    - frequency
+    - name
+    - nym_id
+    - recipient
+    - schedule_end_date
+    - schedule_start_date
+    type: object
   api.TTPRequest:
     properties:
       amount:
@@ -20,6 +56,15 @@ definitions:
     - recipient
     - targetedBalance
     type: object
+  api.listRoutineTransactionPoliciesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/types.RoutineTransactionPolicy'
+        type: array
+      total:
+        type: integer
+    type: object
   api.listTransactionTriggerPoliciesResponse:
     properties:
       data:
@@ -30,7 +75,33 @@ definitions:
         type: integer
     type: object
   types.Balance:
-    additionalProperties: {"type": "string", "enum": ["Contributor", "User"]}
+    additionalProperties:
+      type: integer
+    type: object
+  types.RoutineTransactionPolicy:
+    properties:
+      amount:
+        $ref: '#/definitions/types.Balance'
+      description:
+        type: string
+      frequency:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      nymID:
+        items:
+          type: integer
+        type: array
+      recipient:
+        items:
+          type: integer
+        type: array
+      scheduleEndDate:
+        type: string
+      scheduleStartDate:
+        type: string
     type: object
   types.TransactionTriggerPolicy:
     properties:
@@ -61,6 +132,112 @@ info:
   title: Smart Wallet
   version: 0.0.0
 paths:
+  /api/:nym-id/routine-transaction-policy:
+    get:
+      description: Get all transaction trigger policies
+      operationId: list-routine-transaction-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - in: query
+        name: total
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.listRoutineTransactionPoliciesResponse'
+      tags:
+      - routine-transaction-policy
+    post:
+      description: Create a routine transaction policy
+      operationId: create-routine-transaction-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: Routine Transation Policy
+        in: body
+        name: RTPRequest
+        required: true
+        schema:
+          $ref: '#/definitions/api.RTPRequest'
+      responses:
+        "201":
+          description: ""
+      tags:
+      - routine-transaction-policy
+  /api/:nym-id/routine-transaction-policy/:id:
+    delete:
+      description: Delete a routine transaction policy
+      operationId: delete-routine-transaction-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: ""
+      tags:
+      - routine-transaction-policy
+    get:
+      description: Get a routine transaction policy
+      operationId: get-routine-transaction-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.RoutineTransactionPolicy'
+      tags:
+      - routine-transaction-policy
+    put:
+      description: Update a routine transaction policy
+      operationId: update-routine-transaction-policy
+      parameters:
+      - description: NymID
+        in: path
+        name: nym-id
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Routine Transation Policy
+        in: body
+        name: RTPRequest
+        required: true
+        schema:
+          $ref: '#/definitions/api.RTPRequest'
+      responses:
+        "200":
+          description: ""
+      tags:
+      - routine-transaction-policy
   /api/:nym-id/transaction-trigger-policy:
     get:
       description: Get all transaction trigger policies
@@ -72,10 +249,13 @@ paths:
         required: true
         type: string
       - in: query
+        maximum: 10
+        minimum: 5
         name: itemsPerPage
         required: true
         type: integer
       - in: query
+        minimum: 1
         name: page
         required: true
         type: integer

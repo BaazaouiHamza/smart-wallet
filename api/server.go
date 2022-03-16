@@ -36,8 +36,8 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 	}
 
 	// TODO: get actual JWSGetter
-	router := engine.Group("/:nym-id")
-	router.Use(middleware.WithAuthentication(nil))
+	router := engine.Group("/api")
+	// router.Use(middleware.WithAuthentication(nil))
 
 	//User Policy Router
 	router.GET("/userPolicy/:id", server.getUserPolicyById)
@@ -49,7 +49,6 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 	router.DELETE("/policy/routineTransactionPolicy/:id", server.deleteRoutineTransactionPolicy)
 	router.GET("/policy/routineTransactionPolicy/wallet/:nym_id", server.listRoutineTransactionPolicies)
 	router.GET("/policy/routineTransactionPolicy/:id", server.getRoutineTransactionPolicyById)
-
 	{
 		ttRouter := router.Group("/transaction-trigger-policy")
 

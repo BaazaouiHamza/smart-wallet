@@ -179,7 +179,7 @@ func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.Publ
 		return
 	}
 
-	rtps, err := s.service.ListTransactionTriggerPolicies(
+	rtps, total, err := s.service.ListTransactionTriggerPolicies(
 		prospercontext.JoinContexts(c), pk, reqForm.Page, reqForm.ItemsPerPage,
 	)
 	if err != nil {
@@ -190,6 +190,6 @@ func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.Publ
 	c.JSON(http.StatusOK, listTransactionTriggerPoliciesResponse{
 		Data: rtps,
 		// TODO: return total
-		Total: 0,
+		Total: total,
 	})
 }
