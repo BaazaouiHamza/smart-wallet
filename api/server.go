@@ -40,17 +40,25 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 	// router.Use(middleware.WithAuthentication(nil))
 
 	//User Policy Router
-	router.GET("/userPolicy/:id", server.getUserPolicyById)
-	router.DELETE("/userPolicy/:id", server.deleteUserPolicy)
+	router.GET("/user-policy/:id", server.getUserPolicyById)
+	router.DELETE("/user-policy/:id", server.deleteUserPolicy)
 
-	//Routine Transaction Policy ROUTER
-	router.POST("/policy/routineTransactionPolicy", server.createRoutineTransactionPolicy)
-	router.PATCH("/policy/routineTransactionPolicy/:id", server.updateRoutineTransactionPolicy)
-	router.DELETE("/policy/routineTransactionPolicy/:id", server.deleteRoutineTransactionPolicy)
-	router.GET("/policy/routineTransactionPolicy/wallet/:nym_id", server.listRoutineTransactionPolicies)
-	router.GET("/policy/routineTransactionPolicy/:id", server.getRoutineTransactionPolicyById)
 	{
-		ttRouter := router.Group("/transaction-trigger-policy")
+		rtRouter := router.Group("/:nym-id/routine-transaction-policy")
+
+		//Routine Transaction Policy ROUTER
+		rtRouter.POST("", server.createRoutineTransactionPolicy)
+		rtRouter.PATCH("/:id", server.updateRoutineTransactionPolicy)
+		rtRouter.DELETE("/:id", server.deleteRoutineTransactionPolicy)
+		rtRouter.GET(
+			"/wallet/:nym-id",
+			server.listRoutineTransactionPolicies,
+		)
+		rtRouter.GET("/:id", server.getRoutineTransactionPolicyById)
+	}
+
+	{
+		ttRouter := router.Group("/:nym-id/transaction-trigger-policy")
 
 		//Transaction Trigger Policy ROUTER
 		ttRouter.POST(
