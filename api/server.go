@@ -41,8 +41,8 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 	router.Use(middleware.WithAuthentication(server.jwsGetter))
 
 	//User Policy Router
-	router.GET("/userPolicy/:id", server.getUserPolicyById)
-	router.DELETE("/userPolicy/:id", server.deleteUserPolicy)
+	router.GET("/user-policy/:id", server.getUserPolicyById)
+	router.DELETE("/user-policy/:id", server.deleteUserPolicy)
 
 	//Routine Transaction Policy ROUTER
 	router.POST("/policy/routineTransactionPolicy", server.createRoutineTransactionPolicy)
