@@ -13,12 +13,11 @@ func checkNymID(
 	hn func(*gin.Context, identity.PublicKey),
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		pk, err := identity.PublicKeyFromString(c.Param("nym-id"))
+		pk, err := identity.PublicKeyFromString(c.Param("nymID"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid NymID"})
 			return
 		}
-
 		permission, ok := middleware.GetWalletPermission(c, *pk)
 		if !ok ||
 			permissionLevel == middleware.ViewerPermissionLevel ||

@@ -6,6 +6,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"time"
 )
 
 const createTTP = `-- name: CreateTTP :one
@@ -84,7 +85,7 @@ func (q *Queries) GetTTP(ctx context.Context, id int64) (TransactionTriggerPolic
 }
 
 const listTTP = `-- name: ListTTP :many
-SELECT id, name, description, nym_id, recipient, created_at, targeted_balance, amount FROM transaction_trigger_policies WHERE nym_id = $1
+SELECT id, name, description, nym_id, recipient, created_at, targeted_balance, amount, count(*) OVER() AS full_count FROM transaction_trigger_policies WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3
@@ -96,15 +97,27 @@ type ListTTPParams struct {
 	Offset int32  `json:"offset"`
 }
 
-func (q *Queries) ListTTP(ctx context.Context, arg ListTTPParams) ([]TransactionTriggerPolicy, error) {
+type ListTTPRow struct {
+	ID              int64           `json:"id"`
+	Name            string          `json:"name"`
+	Description     string          `json:"description"`
+	NymID           string          `json:"nym_id"`
+	Recipient       string          `json:"recipient"`
+	CreatedAt       time.Time       `json:"created_at"`
+	TargetedBalance json.RawMessage `json:"targeted_balance"`
+	Amount          json.RawMessage `json:"amount"`
+	FullCount       int64           `json:"full_count"`
+}
+
+func (q *Queries) ListTTP(ctx context.Context, arg ListTTPParams) ([]ListTTPRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTTP, arg.NymID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []TransactionTriggerPolicy{}
+	items := []ListTTPRow{}
 	for rows.Next() {
-		var i TransactionTriggerPolicy
+		var i ListTTPRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -114,6 +127,7 @@ func (q *Queries) ListTTP(ctx context.Context, arg ListTTPParams) ([]Transaction
 			&i.CreatedAt,
 			&i.TargetedBalance,
 			&i.Amount,
+			&i.FullCount,
 		); err != nil {
 			return nil, err
 		}

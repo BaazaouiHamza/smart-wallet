@@ -13,10 +13,11 @@ type Querier interface {
 	DeleteTTP(ctx context.Context, id int64) error
 	DeleteUserPolicy(ctx context.Context, id int64) error
 	GetRTP(ctx context.Context, id int64) (RoutineTransactionPolicy, error)
+	GetRTPs(ctx context.Context, nymID string) ([]RoutineTransactionPolicy, error)
 	GetTTP(ctx context.Context, id int64) (TransactionTriggerPolicy, error)
 	GetUserPolicy(ctx context.Context, id int64) (GetUserPolicyRow, error)
 	ListRTP(ctx context.Context, arg ListRTPParams) ([]ListRTPRow, error)
-	ListTTP(ctx context.Context, arg ListTTPParams) ([]TransactionTriggerPolicy, error)
+	ListTTP(ctx context.Context, arg ListTTPParams) ([]ListTTPRow, error)
 	ListUserPolicies(ctx context.Context, arg ListUserPoliciesParams) ([]UserPolicy, error)
 	UpdateRTP(ctx context.Context, arg UpdateRTPParams) (RoutineTransactionPolicy, error)
 	UpdateTTP(ctx context.Context, arg UpdateTTPParams) (TransactionTriggerPolicy, error)

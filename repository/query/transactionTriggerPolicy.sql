@@ -29,7 +29,7 @@ WHERE id = $1 LIMIT 1;
 DELETE FROM transaction_trigger_policies WHERE id = $1;
 
 -- name: ListTTP :many
-SELECT * FROM transaction_trigger_policies WHERE nym_id = $1
+SELECT *, count(*) OVER() AS full_count FROM transaction_trigger_policies WHERE nym_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3;

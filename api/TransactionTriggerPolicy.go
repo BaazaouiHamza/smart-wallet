@@ -16,6 +16,7 @@ type TTPRequest struct {
 	Description     string             `json:"description" binding:"required"`
 	TargetedBalance ptclTypes.Balance  `json:"targetedBalance" binding:"required"`
 	Recipient       identity.PublicKey `json:"recipient" binding:"required"`
+	NymID           identity.PublicKey `json:"nymID" binding:"required"`
 	Amount          ptclTypes.Balance  `json:"amount" binding:"required,min=1"`
 }
 
@@ -28,9 +29,11 @@ type TTPRequest struct {
 // @Router /api/:nym-id/transaction-trigger-policy [POST]
 func (s *Server) createTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
 	logger := prospercontext.GetLogger(c)
+	println("here")
 
 	var req TTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
@@ -49,11 +52,14 @@ func (s *Server) createTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 	case s.service.IsUserError(err):
 		logger.Debug("invalid transaction trigger policy", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid transaction trigger policy"})
+		return
 	case err != nil:
 		logger.Error("could not create transaction trigger policy", zap.Error(err))
 		c.Status(http.StatusInternalServerError)
+		return
 	default:
 		c.Status(http.StatusCreated)
+		return
 	}
 }
 
@@ -152,7 +158,7 @@ func (s *Server) getTransactionTriggerPolicyById(c *gin.Context, pk identity.Pub
 }
 
 type TTPNymUri struct {
-	NymID identity.PublicKey `uri:"nym_id" binding:"required"`
+	NymID identity.PublicKey `uri:"nymID" binding:"required"`
 }
 
 type listTransactionTriggerPolicies struct {
@@ -174,12 +180,17 @@ type listTransactionTriggerPoliciesResponse struct {
 // @Router /api/:nym-id/transaction-trigger-policy [GET]
 func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.PublicKey) {
 	var reqForm listTransactionTriggerPolicies
+	var reqUri TTPNymUri
 	if err := c.ShouldBindQuery(&reqForm); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	if err := c.BindUri(&reqUri); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
-	rtps, total, err := s.service.ListTransactionTriggerPolicies(
+	ttps, total, err := s.service.ListTransactionTriggerPolicies(
 		prospercontext.JoinContexts(c), pk, reqForm.Page, reqForm.ItemsPerPage,
 	)
 	if err != nil {
@@ -188,7 +199,7 @@ func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.Publ
 	}
 
 	c.JSON(http.StatusOK, listTransactionTriggerPoliciesResponse{
-		Data: rtps,
+		Data: ttps,
 		// TODO: return total
 		Total: total,
 	})

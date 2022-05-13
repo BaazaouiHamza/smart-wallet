@@ -115,7 +115,7 @@ func run(ctx context.Context) (err error) {
 
 	consulHost := cfg.ConsulAddress
 	if consulHost == "" {
-		consulHost = "http://localhost:8500"
+		consulHost = "http://testing.prosperus.tech:8500"
 	}
 
 	return discovery.WithRegistration(

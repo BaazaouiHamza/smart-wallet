@@ -8,13 +8,13 @@ import (
 )
 
 type RoutineTransactionPolicy struct {
-	ID                int
-	Name              string
-	Description       string
-	NymID             identity.PublicKey
-	Recipient         identity.PublicKey
-	ScheduleStartDate time.Time
-	ScheduleEndDate   time.Time
-	Frequency         string
-	Amount            ptclTypes.Balance
+	ID                int                `json:"id"`
+	Name              string             `json:"name"`
+	Description       string             `json:"description"`
+	NymID             identity.PublicKey `json:"nymID"`
+	Recipient         identity.PublicKey `json:"recipient"`
+	ScheduleStartDate time.Time          `json:"scheduleStartDate"`
+	ScheduleEndDate   time.Time          `json:"scheduleEndDate"`
+	Frequency         string             `json:"frequency"`
+	Amount            ptclTypes.Balance  `json:"amount"`
 }

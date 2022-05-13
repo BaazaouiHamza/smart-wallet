@@ -32,6 +32,8 @@ type SmartWallet interface {
 
 	DeletePolicy(context.Context, identity.PublicKey, int) error
 
+	DeleteUserPolicy(ctx context.Context, id int) error
+
 	IsNotFoundError(error) bool
 	IsUserError(error) bool
 }
@@ -99,6 +101,7 @@ func (r *SmartWalletStd) CreateRoutineTransactionPolicy(ctx context.Context, rtp
 func (r *SmartWalletStd) CreateTransactionTriggerPolicy(
 	ctx context.Context, ttp types.TransactionTriggerPolicy,
 ) error {
+	println("here")
 	balance, amount, err := marshalBoth(ttp.TargetedBalance, ttp.Amount)
 	if err != nil {
 		return fmt.Errorf("could not marshal balances: %w", err)
@@ -189,7 +192,6 @@ func (r *SmartWalletStd) GetTransactionTriggerPolicy(
 func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.RoutineTransactionPolicy, int, error) {
-	var total int
 	var amount map[ptclTypes.UnitID]int64
 	rtps, err := repository.New(r.DB).ListRTP(ctx, repository.ListRTPParams{
 		NymID:  nym.String(),
@@ -199,8 +201,9 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 	if err != nil {
 		return nil, 0, nil
 	}
-	rts := make([]types.RoutineTransactionPolicy, len(rtps))
 
+	rts := make([]types.RoutineTransactionPolicy, 0, len(rtps))
+	total := int(rtps[0].FullCount)
 	for _, rtp := range rtps {
 		err = json.Unmarshal(rtp.Amount, &amount)
 		if err != nil {
@@ -210,7 +213,6 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 		if err != nil {
 			return nil, 0, fmt.Errorf("could not get public key %w", err)
 		}
-		total = int(rtp.FullCount)
 		rts = append(rts, types.RoutineTransactionPolicy{
 			ID:                int(rtp.ID),
 			Name:              rtp.Name,
@@ -222,6 +224,7 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 			ScheduleStartDate: rtp.ScheduleEndDate,
 			ScheduleEndDate:   rtp.ScheduleEndDate,
 		})
+
 	}
 	return rts, total, nil
 }
@@ -229,7 +232,6 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.TransactionTriggerPolicy, int, error) {
-	var total int
 	ttps, err := repository.New(r.DB).ListTTP(ctx, repository.ListTTPParams{
 		NymID:  nym.String(),
 		Limit:  int32(itemsPerPage),
@@ -238,13 +240,16 @@ func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 	if err != nil {
 		return nil, 0, err
 	}
-
-	ts := make([]types.TransactionTriggerPolicy, len(ttps))
-
+	ts := make([]types.TransactionTriggerPolicy, 0, len(ttps))
+	total := int(ttps[0].FullCount)
 	for _, ttp := range ttps {
 		balance, amount, err := unmarshalBoth(ttp.TargetedBalance, ttp.Amount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("could not unmarshal balances: %w", err)
+		}
+		recipient, err := identity.PublicKeyFromString(ttp.Recipient)
+		if err != nil {
+			return nil, 0, fmt.Errorf("could not get public key %w", err)
 		}
 
 		ts = append(ts, types.TransactionTriggerPolicy{
@@ -252,9 +257,9 @@ func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 			Description:     ttp.Description,
 			NymID:           nym,
 			TargetedBalance: balance,
+			Recipient:       *recipient,
 			Amount:          amount,
 		})
-		total++
 	}
 
 	return ts, total, nil
@@ -262,6 +267,14 @@ func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 }
 
 func (r *SmartWalletStd) DeletePolicy(ctx context.Context, pk identity.PublicKey, id int) error {
+	if err := repository.New(r.DB).DeleteUserPolicy(ctx, int64(id)); err != nil {
+		return fmt.Errorf("could not delete policy %d: %w", id, err)
+	}
+
+	return nil
+}
+
+func (r *SmartWalletStd) DeleteUserPolicy(ctx context.Context, id int) error {
 	if err := repository.New(r.DB).DeleteUserPolicy(ctx, int64(id)); err != nil {
 		return fmt.Errorf("could not delete policy %d: %w", id, err)
 	}

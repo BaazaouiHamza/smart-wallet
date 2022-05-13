@@ -2,10 +2,12 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
 	prospercontext "git.digitus.me/library/prosper-kit/context"
+	"git.digitus.me/library/prosper-kit/middleware"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
 	ptclTypes "git.digitus.me/prosperus/protocol/types"
@@ -16,12 +18,54 @@ import (
 type RTPRequest struct {
 	Name              string             `json:"name" binding:"required"`
 	Description       string             `json:"description" binding:"required"`
-	NymID             identity.PublicKey `json:"nym_id" binding:"required"`
+	NymID             identity.PublicKey `json:"nymId" binding:"required"`
 	Recipient         identity.PublicKey `json:"recipient" binding:"required"`
-	ScheduleStartDate string             `json:"schedule_start_date" binding:"required"`
-	ScheduleEndDate   string             `json:"schedule_end_date" binding:"required"`
+	ScheduleStartDate time.Time          `json:"scheduleStartDate" binding:"required"`
+	ScheduleEndDate   time.Time          `json:"scheduleEndDate" binding:"required"`
 	Frequency         string             `json:"frequency" binding:"required,oneof= DAILY MONTHLY WEEKLY"`
 	Amount            ptclTypes.Balance  `json:"amount" binding:"required"`
+}
+
+func (s *Server) addRoutineTransactionPolicy(c *gin.Context, pk identity.PublicKey) {
+	logger := prospercontext.GetLogger(c)
+
+	var req RTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	// scheduleStartDate, _ := time.Parse("2006-01-02", req.ScheduleStartDate)
+	// scheduleEndDate, _ := time.Parse("2006-01-02", req.ScheduleEndDate)
+	if req.ScheduleEndDate.Before(req.ScheduleStartDate) {
+		err := errors.New("scheduelEndDate must be after scheduelStartDate")
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// TODO: insert
+	err := s.service.CreateRoutineTransactionPolicy(prospercontext.JoinContexts(c), types.RoutineTransactionPolicy{
+		Name:              req.Name,
+		Description:       req.Description,
+		ScheduleStartDate: req.ScheduleStartDate,
+		ScheduleEndDate:   req.ScheduleEndDate,
+		Amount:            req.Amount,
+		Frequency:         req.Frequency,
+		NymID:             pk,
+		Recipient:         req.Recipient,
+	})
+	switch {
+	case s.service.IsUserError(err):
+		logger.Debug("invalid routine transaction policy", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid routine transaction policy"})
+		return
+	case err != nil:
+		logger.Error("could not create routine transaction policy", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	default:
+		c.Status(http.StatusCreated)
+		return
+	}
 }
 
 // @ID create-routine-transaction-policy
@@ -39,9 +83,9 @@ func (s *Server) createRoutineTransactionPolicy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	scheduleStartDate, _ := time.Parse("2006-01-02", req.ScheduleStartDate)
-	scheduleEndDate, _ := time.Parse("2006-01-02", req.ScheduleEndDate)
-	if scheduleEndDate.Before(scheduleStartDate) {
+	// scheduleStartDate, _ := time.Parse("2006-01-02", req.ScheduleStartDate)
+	// scheduleEndDate, _ := time.Parse("2006-01-02", req.ScheduleEndDate)
+	if req.ScheduleEndDate.Before(req.ScheduleStartDate) {
 		err := errors.New("scheduelEndDate must be after scheduelStartDate")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -51,8 +95,8 @@ func (s *Server) createRoutineTransactionPolicy(c *gin.Context) {
 	err := s.service.CreateRoutineTransactionPolicy(prospercontext.JoinContexts(c), types.RoutineTransactionPolicy{
 		Name:              req.Name,
 		Description:       req.Description,
-		ScheduleStartDate: scheduleStartDate,
-		ScheduleEndDate:   scheduleEndDate,
+		ScheduleStartDate: req.ScheduleStartDate,
+		ScheduleEndDate:   req.ScheduleEndDate,
 		Amount:            req.Amount,
 		Frequency:         req.Frequency,
 		NymID:             req.NymID,
@@ -115,9 +159,9 @@ func (s *Server) updateRoutineTransactionPolicy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	scheduleStartDate, _ := time.Parse("2006-01-02", req.ScheduleStartDate)
-	scheduleEndDate, _ := time.Parse("2006-01-02", req.ScheduleEndDate)
-	if scheduleEndDate.Before(scheduleStartDate) {
+	// scheduleStartDate, _ := time.Parse("2006-01-02", req.ScheduleStartDate)
+	// scheduleEndDate, _ := time.Parse("2006-01-02", req.ScheduleEndDate)
+	if req.ScheduleEndDate.Before(req.ScheduleStartDate) {
 		err := errors.New("scheduelEndDate must be after scheduelStartDate")
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -129,8 +173,8 @@ func (s *Server) updateRoutineTransactionPolicy(c *gin.Context) {
 		Description:       req.Description,
 		Recipient:         req.Recipient,
 		NymID:             req.NymID,
-		ScheduleStartDate: scheduleStartDate,
-		ScheduleEndDate:   scheduleEndDate,
+		ScheduleStartDate: req.ScheduleStartDate,
+		ScheduleEndDate:   req.ScheduleStartDate,
 		Frequency:         req.Frequency,
 		Amount:            req.Amount,
 	})
@@ -199,6 +243,9 @@ type listRoutineTransactionPoliciesResponse struct {
 // @Success 200 {object} listRoutineTransactionPoliciesResponse
 // @Router /api/:nym-id/routine-transaction-policy [GET]
 func (s *Server) listRoutineTransactionPolicies(c *gin.Context) {
+	fmt.Println(c.Request.Header)
+	logger := middleware.GetLogger(c)
+	logger.Debug("Authorization", zap.String("", c.Request.Header.Get("Authorization")))
 	var reqUri RTPNymUri
 	var reqForm listRoutineTransactionPolicies
 	if err := c.ShouldBindQuery(&reqForm); err != nil {

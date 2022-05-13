@@ -94,11 +94,50 @@ func (q *Queries) GetRTP(ctx context.Context, id int64) (RoutineTransactionPolic
 	return i, err
 }
 
+const getRTPs = `-- name: GetRTPs :many
+SELECT id, name, description, nym_id, recipient, created_at, schedule_start_date, schedule_end_date, frequency, amount FROM routine_transaction_policies WHERE nym_id = $1
+ORDER BY id
+`
+
+func (q *Queries) GetRTPs(ctx context.Context, nymID string) ([]RoutineTransactionPolicy, error) {
+	rows, err := q.db.QueryContext(ctx, getRTPs, nymID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RoutineTransactionPolicy{}
+	for rows.Next() {
+		var i RoutineTransactionPolicy
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.NymID,
+			&i.Recipient,
+			&i.CreatedAt,
+			&i.ScheduleStartDate,
+			&i.ScheduleEndDate,
+			&i.Frequency,
+			&i.Amount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRTP = `-- name: ListRTP :many
 SELECT id, name, description, nym_id, recipient, created_at, schedule_start_date, schedule_end_date, frequency, amount, count(*) OVER() AS full_count FROM routine_transaction_policies WHERE nym_id = $1
 ORDER BY id
-LIMIT $2
 OFFSET $3
+LIMIT $2
 `
 
 type ListRTPParams struct {

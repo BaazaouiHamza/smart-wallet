@@ -15,7 +15,8 @@ import (
 // @Description ProsperUs Smart wallet
 
 type Server struct {
-	service service.SmartWallet
+	service   service.SmartWallet
+	jwsGetter middleware.JWSGetter
 }
 
 func NewServer(
@@ -23,7 +24,7 @@ func NewServer(
 	engine *gin.Engine,
 	jwsGetter middleware.JWSGetter,
 ) *Server {
-	server := &Server{service: svc}
+	server := &Server{service: svc, jwsGetter: jwsGetter}
 	server.setUpRouter(engine)
 	return server
 }
@@ -37,7 +38,7 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 
 	// TODO: get actual JWSGetter
 	router := engine.Group("/api")
-	// router.Use(middleware.WithAuthentication(nil))
+	router.Use(middleware.WithAuthentication(server.jwsGetter))
 
 	//User Policy Router
 	router.GET("/userPolicy/:id", server.getUserPolicyById)
@@ -45,18 +46,19 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 
 	//Routine Transaction Policy ROUTER
 	router.POST("/policy/routineTransactionPolicy", server.createRoutineTransactionPolicy)
-	router.PATCH("/policy/routineTransactionPolicy/:id", server.updateRoutineTransactionPolicy)
+	router.PUT("/policy/routineTransactionPolicy/:id", server.updateRoutineTransactionPolicy)
 	router.DELETE("/policy/routineTransactionPolicy/:id", server.deleteRoutineTransactionPolicy)
 	router.GET("/policy/routineTransactionPolicy/wallet/:nym_id", server.listRoutineTransactionPolicies)
 	router.GET("/policy/routineTransactionPolicy/:id", server.getRoutineTransactionPolicyById)
 	{
-		ttRouter := router.Group("/transaction-trigger-policy")
+		rtpRouter := router.Group("/:nymID/routine-transaction-policy")
+		rtpRouter.POST("", checkNymID(middleware.ContributorPermissionLevel, server.addRoutineTransactionPolicy))
+	}
+	{
+		ttRouter := router.Group("/:nymID/transaction-trigger-policy")
 
 		//Transaction Trigger Policy ROUTER
-		ttRouter.POST(
-			"",
-			checkNymID(middleware.ContributorPermissionLevel, server.createTransactionTriggerPolicy),
-		)
+		ttRouter.POST("", checkNymID(middleware.ContributorPermissionLevel, server.createTransactionTriggerPolicy))
 		ttRouter.PUT(
 			"/:id",
 			checkNymID(middleware.ContributorPermissionLevel, server.updateTransactionTriggerPolicy),

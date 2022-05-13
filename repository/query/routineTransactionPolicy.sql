@@ -36,5 +36,10 @@ DELETE FROM routine_transaction_policies WHERE id = $1;
 -- name: ListRTP :many
 SELECT *, count(*) OVER() AS full_count FROM routine_transaction_policies WHERE nym_id = $1
 ORDER BY id
-LIMIT $2
-OFFSET $3;
+OFFSET $3
+LIMIT $2;
+
+-- name: GetRTPs :many
+SELECT * FROM routine_transaction_policies WHERE nym_id = $1
+ORDER BY id;
+
