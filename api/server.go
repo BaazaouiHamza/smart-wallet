@@ -52,28 +52,28 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 	router.GET("/policy/routineTransactionPolicy/:id", server.getRoutineTransactionPolicyById)
 	{
 		rtpRouter := router.Group("/:nymID/routine-transaction-policy")
-		rtpRouter.POST("", checkNymID(middleware.ContributorPermissionLevel, server.addRoutineTransactionPolicy))
+		rtpRouter.POST("", checkContributorNymID(middleware.ContributorPermissionLevel, server.addRoutineTransactionPolicy))
 	}
 	{
 		ttRouter := router.Group("/:nymID/transaction-trigger-policy")
 
 		//Transaction Trigger Policy ROUTER
-		ttRouter.POST("", checkNymID(middleware.ContributorPermissionLevel, server.createTransactionTriggerPolicy))
+		ttRouter.POST("", checkContributorNymID(middleware.ContributorPermissionLevel, server.createTransactionTriggerPolicy))
 		ttRouter.PUT(
 			"/:id",
-			checkNymID(middleware.ContributorPermissionLevel, server.updateTransactionTriggerPolicy),
+			checkContributorNymID(middleware.ContributorPermissionLevel, server.updateTransactionTriggerPolicy),
 		)
 		ttRouter.GET(
 			"/:id",
-			checkNymID(middleware.ViewerPermissionLevel, server.getTransactionTriggerPolicyById),
+			checkViewerNymID(middleware.ViewerPermissionLevel, server.getTransactionTriggerPolicyById),
 		)
 		ttRouter.DELETE(
 			"/:id",
-			checkNymID(middleware.ContributorPermissionLevel, server.deleteTransactionTriggerPolicy),
+			checkContributorNymID(middleware.ContributorPermissionLevel, server.deleteTransactionTriggerPolicy),
 		)
 		ttRouter.GET(
 			"",
-			checkNymID(middleware.ViewerPermissionLevel, server.listTransactionTriggerPolicies),
+			checkViewerNymID(middleware.ViewerPermissionLevel, server.listTransactionTriggerPolicies),
 		)
 	}
 

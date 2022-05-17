@@ -179,28 +179,30 @@ type listTransactionTriggerPoliciesResponse struct {
 // @Success 200 {object} listTransactionTriggerPoliciesResponse
 // @Router /api/:nym-id/transaction-trigger-policy [GET]
 func (s *Server) listTransactionTriggerPolicies(c *gin.Context, pk identity.PublicKey) {
+	logger := prospercontext.GetLogger(c)
 	var reqForm listTransactionTriggerPolicies
-	var reqUri TTPNymUri
 	if err := c.ShouldBindQuery(&reqForm); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	if err := c.BindUri(&reqUri); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
 	ttps, total, err := s.service.ListTransactionTriggerPolicies(
 		prospercontext.JoinContexts(c), pk, reqForm.Page, reqForm.ItemsPerPage,
 	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+	switch {
+	case s.service.IsUserError(err):
+		logger.Debug("invalid transaction trigger policy", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid transaction trigger policy"})
+		return
+	case err != nil:
+		logger.Error("could not get transaction trigger policies", zap.Error(err))
+		c.Status(http.StatusInternalServerError)
+		return
+	default:
+		c.JSON(http.StatusOK, listTransactionTriggerPoliciesResponse{
+			Data: ttps,
+			// TODO: return total
+			Total: total,
+		})
 		return
 	}
-
-	c.JSON(http.StatusOK, listTransactionTriggerPoliciesResponse{
-		Data: ttps,
-		// TODO: return total
-		Total: total,
-	})
 }
