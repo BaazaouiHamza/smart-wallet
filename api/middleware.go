@@ -9,7 +9,6 @@ import (
 )
 
 func checkContributorNymID(
-	permissionLevel string,
 	hn func(*gin.Context, identity.PublicKey),
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -18,9 +17,8 @@ func checkContributorNymID(
 			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid NymID"})
 			return
 		}
-		permission, ok := middleware.GetWalletPermission(c, *pk)
-		if !ok ||
-			permission != permissionLevel {
+		ok := middleware.IsWalletContributor(c, *pk)
+		if !ok {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "insufficient priviledge"})
 			return
 		}
@@ -30,7 +28,6 @@ func checkContributorNymID(
 }
 
 func checkViewerNymID(
-	permissionLevel string,
 	hn func(*gin.Context, identity.PublicKey),
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -39,7 +36,7 @@ func checkViewerNymID(
 			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid NymID"})
 			return
 		}
-		_, ok := middleware.GetWalletPermission(c, *pk)
+		ok := middleware.IsWalletViewer(c, *pk)
 		if !ok {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "insufficient priviledge"})
 			return
