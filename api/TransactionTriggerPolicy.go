@@ -76,14 +76,17 @@ type TTPRequestUri struct {
 // @Success 200
 // @Router /api/:nym-id/transaction-trigger-policy/:id [PUT]
 func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.PublicKey) {
+	logger := prospercontext.GetLogger(c)
 	var req TTPRequest
 	var reqUri TTPRequestUri
 
 	if err := c.BindUri(&reqUri); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
@@ -98,11 +101,19 @@ func (s *Server) updateTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 	}
 
 	err := s.service.UpdateTransactionTriggerPolicy(prospercontext.JoinContexts(c), arg)
-	if err != nil {
+	switch {
+	case s.service.IsUserError(err):
+		logger.Debug("invalid tansaction trigger  policy", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid transaction trigger policy"})
+		return
+	case err != nil:
+		logger.Error("could not update transaction trigger policy", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	default:
+		c.Status(http.StatusOK)
 		return
 	}
-
-	c.Status(http.StatusNoContent)
 }
 
 // @ID delete-transaction-trigger-policy

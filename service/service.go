@@ -192,7 +192,6 @@ func (r *SmartWalletStd) GetTransactionTriggerPolicy(
 func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.RoutineTransactionPolicy, int, error) {
-	var amount map[ptclTypes.UnitID]int64
 	rtps, err := repository.New(r.DB).ListRTP(ctx, repository.ListRTPParams{
 		NymID:  nym.String(),
 		Limit:  int32(itemsPerPage),
@@ -205,7 +204,7 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 	rts := make([]types.RoutineTransactionPolicy, 0, len(rtps))
 	total := int(rtps[0].FullCount)
 	for _, rtp := range rtps {
-		err = json.Unmarshal(rtp.Amount, &amount)
+		amount, err := unmarshalAmount(rtp.Amount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("could not unmarshal amount: %w", err)
 		}
@@ -221,7 +220,7 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 			Recipient:         *recipient,
 			Amount:            amount,
 			Frequency:         rtp.Frequency,
-			ScheduleStartDate: rtp.ScheduleEndDate,
+			ScheduleStartDate: rtp.ScheduleStartDate,
 			ScheduleEndDate:   rtp.ScheduleEndDate,
 		})
 
@@ -253,6 +252,7 @@ func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 		}
 
 		ts = append(ts, types.TransactionTriggerPolicy{
+			ID:              int(ttp.ID),
 			Name:            ttp.Name,
 			Description:     ttp.Description,
 			NymID:           nym,

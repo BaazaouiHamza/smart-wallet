@@ -17,6 +17,15 @@ func marshalBoth(a, b ptclTypes.Balance) ([]byte, []byte, error) {
 	return x, y, err
 }
 
+func unmarshalAmount(a []byte) (ptclTypes.Balance, error) {
+	var x ptclTypes.Balance
+
+	if err := json.Unmarshal(a, &x); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
 func unmarshalBoth(a, b []byte) (ptclTypes.Balance, ptclTypes.Balance, error) {
 	var x, y ptclTypes.Balance
 

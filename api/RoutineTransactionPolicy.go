@@ -174,7 +174,7 @@ func (s *Server) updateRoutineTransactionPolicy(c *gin.Context) {
 		Recipient:         req.Recipient,
 		NymID:             req.NymID,
 		ScheduleStartDate: req.ScheduleStartDate,
-		ScheduleEndDate:   req.ScheduleStartDate,
+		ScheduleEndDate:   req.ScheduleEndDate,
 		Frequency:         req.Frequency,
 		Amount:            req.Amount,
 	})
