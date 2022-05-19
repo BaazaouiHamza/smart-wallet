@@ -15,7 +15,7 @@ import (
 
 type SmartWallet interface {
 	CreateRoutineTransactionPolicy(context.Context, types.RoutineTransactionPolicy) error
-	GetRoutineTransactionPolicy(context.Context, int) (*types.RoutineTransactionPolicy, error)
+	GetRoutineTransactionPolicy(context.Context, identity.PublicKey, int) (*types.RoutineTransactionPolicy, error)
 	UpdateRoutineTransactionPolicy(context.Context, types.RoutineTransactionPolicy) error
 	ListRoutineTransactionPolicies(
 		ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
@@ -46,7 +46,7 @@ func NewSmartWallet(db *sql.DB) SmartWallet {
 	return &SmartWalletStd{DB: db}
 }
 
-func (r *SmartWalletStd) GetRoutineTransactionPolicy(ctx context.Context, id int) (*types.RoutineTransactionPolicy, error) {
+func (r *SmartWalletStd) GetRoutineTransactionPolicy(ctx context.Context, pk identity.PublicKey, id int) (*types.RoutineTransactionPolicy, error) {
 	rtp, err := repository.New(r.DB).GetRTP(ctx, int64(id))
 	if err != nil {
 		return nil, err
@@ -55,10 +55,6 @@ func (r *SmartWalletStd) GetRoutineTransactionPolicy(ctx context.Context, id int
 	err = json.Unmarshal(rtp.Amount, &balance)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal balance %w", err)
-	}
-	nym_id, err := identity.PublicKeyFromString(rtp.NymID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get public key from nym_id %w", err)
 	}
 	recipient, err := identity.PublicKeyFromString(rtp.Recipient)
 	if err != nil {
@@ -71,7 +67,7 @@ func (r *SmartWalletStd) GetRoutineTransactionPolicy(ctx context.Context, id int
 		ScheduleEndDate:   rtp.ScheduleEndDate,
 		Amount:            balance,
 		Frequency:         rtp.Frequency,
-		NymID:             *nym_id,
+		NymID:             pk,
 		Recipient:         *recipient,
 	}, nil
 

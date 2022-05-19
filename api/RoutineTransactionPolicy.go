@@ -68,57 +68,8 @@ func (s *Server) addRoutineTransactionPolicy(c *gin.Context, pk identity.PublicK
 	}
 }
 
-// @ID create-routine-transaction-policy
-// @Tags routine-transaction-policy
-// @Description Create a routine transaction policy
-// @Param nym-id path string true "NymID"
-// @Param RTPRequest body RTPRequest true "Routine Transation Policy"
-// @Success 201
-// @Router /api/:nym-id/routine-transaction-policy [POST]
-func (s *Server) createRoutineTransactionPolicy(c *gin.Context) {
-	logger := prospercontext.GetLogger(c)
-
-	var req RTPRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	// scheduleStartDate, _ := time.Parse("2006-01-02", req.ScheduleStartDate)
-	// scheduleEndDate, _ := time.Parse("2006-01-02", req.ScheduleEndDate)
-	if req.ScheduleEndDate.Before(req.ScheduleStartDate) {
-		err := errors.New("scheduelEndDate must be after scheduelStartDate")
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
-	// TODO: insert
-	err := s.service.CreateRoutineTransactionPolicy(prospercontext.JoinContexts(c), types.RoutineTransactionPolicy{
-		Name:              req.Name,
-		Description:       req.Description,
-		ScheduleStartDate: req.ScheduleStartDate,
-		ScheduleEndDate:   req.ScheduleEndDate,
-		Amount:            req.Amount,
-		Frequency:         req.Frequency,
-		NymID:             req.NymID,
-		Recipient:         req.Recipient,
-	})
-	switch {
-	case s.service.IsUserError(err):
-		logger.Debug("invalid routine transaction policy", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid routine transaction policy"})
-		return
-	case err != nil:
-		logger.Error("could not create routine transaction policy", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	default:
-		c.Status(http.StatusCreated)
-		return
-	}
-}
-
 type RTPRequestUri struct {
-	ID int64 `uri:"id" binding:"required,min=1"`
+	ID int `uri:"id" binding:"required,min=1"`
 }
 
 // @ID delete-routine-transaction-policy
@@ -128,14 +79,18 @@ type RTPRequestUri struct {
 // @Param id path int true "ID"
 // @Success 204
 // @Router /api/:nym-id/routine-transaction-policy/:id [DELETE]
-func (s *Server) deleteRoutineTransactionPolicy(c *gin.Context) {
+func (s *Server) deleteRoutineTransactionPolicy(c *gin.Context, pk identity.PublicKey) {
 	var reqUri RTPRequestUri
 	if err := c.BindUri(&reqUri); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	if err := s.service.DeletePolicy(prospercontext.JoinContexts(c), pk, reqUri.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
 
-	// TODO: delete
+	c.Status(http.StatusNoContent)
 }
 
 // @ID update-routine-transaction-policy
@@ -146,7 +101,7 @@ func (s *Server) deleteRoutineTransactionPolicy(c *gin.Context) {
 // @Param RTPRequest body RTPRequest true "Routine Transation Policy"
 // @Success 200
 // @Router /api/:nym-id/routine-transaction-policy/:id [PUT]
-func (s *Server) updateRoutineTransactionPolicy(c *gin.Context) {
+func (s *Server) updateRoutineTransactionPolicy(c *gin.Context, pk identity.PublicKey) {
 
 	logger := prospercontext.GetLogger(c)
 	var req RTPRequest
@@ -172,7 +127,7 @@ func (s *Server) updateRoutineTransactionPolicy(c *gin.Context) {
 		Name:              req.Name,
 		Description:       req.Description,
 		Recipient:         req.Recipient,
-		NymID:             req.NymID,
+		NymID:             pk,
 		ScheduleStartDate: req.ScheduleStartDate,
 		ScheduleEndDate:   req.ScheduleEndDate,
 		Frequency:         req.Frequency,
@@ -201,7 +156,7 @@ func (s *Server) updateRoutineTransactionPolicy(c *gin.Context) {
 // @Param id path int true "ID"
 // @Success 200 {object} types.RoutineTransactionPolicy
 // @Router /api/:nym-id/routine-transaction-policy/:id [GET]
-func (s *Server) getRoutineTransactionPolicyById(c *gin.Context) {
+func (s *Server) getRoutineTransactionPolicyById(c *gin.Context, pk identity.PublicKey) {
 	var reqUri RTPRequestUri
 
 	if err := c.ShouldBindUri(&reqUri); err != nil {
@@ -209,7 +164,7 @@ func (s *Server) getRoutineTransactionPolicyById(c *gin.Context) {
 		return
 	}
 
-	rtp, err := s.service.GetRoutineTransactionPolicy(prospercontext.JoinContexts(c), int(reqUri.ID))
+	rtp, err := s.service.GetRoutineTransactionPolicy(prospercontext.JoinContexts(c), pk, int(reqUri.ID))
 	if err != nil {
 		if s.service.IsNotFoundError(err) {
 			c.Status(http.StatusNotFound)
@@ -242,27 +197,18 @@ type listRoutineTransactionPoliciesResponse struct {
 // @Param _ query listRoutineTransactionPoliciesResponse false "comment"
 // @Success 200 {object} listRoutineTransactionPoliciesResponse
 // @Router /api/:nym-id/routine-transaction-policy [GET]
-func (s *Server) listRoutineTransactionPolicies(c *gin.Context) {
+func (s *Server) listRoutineTransactionPolicies(c *gin.Context, pk identity.PublicKey) {
 	fmt.Println(c.Request.Header)
 	logger := middleware.GetLogger(c)
 	logger.Debug("Authorization", zap.String("", c.Request.Header.Get("Authorization")))
-	var reqUri RTPNymUri
 	var reqForm listRoutineTransactionPolicies
 	if err := c.ShouldBindQuery(&reqForm); err != nil {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	if err := c.BindUri(&reqUri); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-	nym, err := identity.PublicKeyFromString(reqUri.NymID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
+
 	rtps, total, err := s.service.ListRoutineTransactionPolicies(
-		prospercontext.JoinContexts(c), *nym, reqForm.Page, reqForm.ItemsPerPage,
+		prospercontext.JoinContexts(c), pk, reqForm.Page, reqForm.ItemsPerPage,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))

@@ -40,19 +40,13 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 	router := engine.Group("/api")
 	router.Use(middleware.WithAuthentication(server.jwsGetter))
 
-	//User Policy Router
-	router.GET("/user-policy/:id", server.getUserPolicyById)
-	router.DELETE("/user-policy/:id", server.deleteUserPolicy)
-
-	//Routine Transaction Policy ROUTER
-	router.POST("/policy/routineTransactionPolicy", server.createRoutineTransactionPolicy)
-	router.PUT("/policy/routineTransactionPolicy/:id", server.updateRoutineTransactionPolicy)
-	router.DELETE("/policy/routineTransactionPolicy/:id", server.deleteRoutineTransactionPolicy)
-	router.GET("/policy/routineTransactionPolicy/wallet/:nym_id", server.listRoutineTransactionPolicies)
-	router.GET("/policy/routineTransactionPolicy/:id", server.getRoutineTransactionPolicyById)
 	{
 		rtpRouter := router.Group("/:nymID/routine-transaction-policy")
 		rtpRouter.POST("", checkContributorNymID(server.addRoutineTransactionPolicy))
+		rtpRouter.GET("", checkViewerNymID(server.listRoutineTransactionPolicies))
+		rtpRouter.PUT("/:id", checkContributorNymID(server.updateRoutineTransactionPolicy))
+		rtpRouter.GET("/:id", checkViewerNymID(server.getRoutineTransactionPolicyById))
+		rtpRouter.DELETE("/:id", checkContributorNymID(server.deleteRoutineTransactionPolicy))
 	}
 	{
 		ttRouter := router.Group("/:nymID/transaction-trigger-policy")
