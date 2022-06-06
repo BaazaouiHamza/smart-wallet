@@ -1,0 +1,27 @@
+- name: Deploy Smart Wallet to env "{{ ENV }}"
+
+  hosts:
+    "{{ 'smart-wallet-develop' if ENV|lower == 'develop' \
+     else 'smart-wallet-testing' if ENV|lower == 'testing' \
+     else 'smart-wallet-preprod' if ENV|lower == 'preprod' \
+     else 'smart-wallet-production' if ENV |lower == 'prod' }}"
+
+  vars:
+    app_name: smart-wallet
+    final_dest: /opt/{{ app_name }}/
+
+  tasks:
+    - name: Deploy package to "{{ ENV }}"
+      copy:
+        src: "{{ item }}"
+        dest: "{{ final_dest }}"
+        owner: jenkins
+        group: jenkins
+        mode: 0740
+      with_items:
+        - smart-wallet
+
+    - name: Updating Supervisord
+      supervisorctl:
+        name: "{{ app_name }}"
+        state: restarted
