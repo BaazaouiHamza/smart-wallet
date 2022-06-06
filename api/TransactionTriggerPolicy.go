@@ -64,7 +64,7 @@ func (s *Server) createTransactionTriggerPolicy(c *gin.Context, pk identity.Publ
 }
 
 type TTPRequestUri struct {
-	ID int `uri:"id" binding:"required,min=1"`
+	ID int `uri:"id" binding:"required,min=0"`
 }
 
 // @ID update-transaction-trigger-policy
@@ -173,7 +173,7 @@ type TTPNymUri struct {
 }
 
 type listTransactionTriggerPolicies struct {
-	Page         int `form:"page" binding:"required,min=1"`
+	Page         int `form:"page" binding:"min=0"`
 	ItemsPerPage int `form:"itemsPerPage" binding:"required,min=5,max=10"`
 }
 

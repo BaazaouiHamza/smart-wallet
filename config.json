@@ -1,11 +1,11 @@
 {
- "db" : {
-  "user" : "postgres",
-  "pass":"07719811gg",
-  "host":"localhost",
-  "name":"pfe?sslmode=disable",
-  "port": 5432
+  "db": {
+    "user": "postgres",
+    "pass": "apassword",
+    "host": "localhost",
+    "name": "smart-wallet",
+    "port": 5432
   },
-  "port":4000,
-  "consulAddress":"http://testing.prosperus.tech:8500"
+  "port": 4000,
+  "consulAddress": "http://testing.prosperus.tech:8500"
 }

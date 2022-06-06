@@ -69,7 +69,7 @@ func (s *Server) addRoutineTransactionPolicy(c *gin.Context, pk identity.PublicK
 }
 
 type RTPRequestUri struct {
-	ID int `uri:"id" binding:"required,min=1"`
+	ID int `uri:"id" binding:"required"`
 }
 
 // @ID delete-routine-transaction-policy
@@ -181,7 +181,7 @@ type RTPNymUri struct {
 }
 
 type listRoutineTransactionPolicies struct {
-	Page         int `form:"page" binding:"required,min=1"`
+	Page         int `form:"page" binding:"min=0"`
 	ItemsPerPage int `form:"itemsPerPage" binding:"required,min=5,max=10"`
 }
 

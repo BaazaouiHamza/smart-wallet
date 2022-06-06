@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,25 +11,28 @@ import (
 	"git.digitus.me/library/prosper-kit/application"
 	"git.digitus.me/library/prosper-kit/authentication"
 	"git.digitus.me/library/prosper-kit/config"
+	prospercontext "git.digitus.me/library/prosper-kit/context"
 	"git.digitus.me/library/prosper-kit/discovery"
 	"git.digitus.me/library/prosper-kit/server"
+	walletrepository "git.digitus.me/library/prosper-kit/wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/api"
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/service"
 	"go.elastic.co/apm/module/apmhttp"
 	"go.elastic.co/apm/module/apmsql"
-	_ "go.elastic.co/apm/module/apmsql/pq"
+	_ "go.elastic.co/apm/module/apmsql/pgxv4"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
 type smartWalletConfig struct {
 	DB struct {
-		Host string `json:"host"`
-		Name string `json:"name"`
-		Pass string `json:"pass"`
-		Port int    `json:"port"`
-		User string `json:"user"`
+		Host       string `json:"host"`
+		Name       string `json:"name"`
+		Pass       string `json:"pass"`
+		Port       int    `json:"port"`
+		User       string `json:"user"`
+		SSLEnabled bool   `json:"sslEnabled"`
 	} `json:"db"`
 	Address       string `json:"address"`
 	Port          int    `json:"port"`
@@ -41,44 +45,68 @@ func run(ctx context.Context) (err error) {
 		return
 	}
 
+	ctx = prospercontext.WithLogger(ctx, logger)
+
+	cfgPath := flag.String("config", "config file path", "")
+	flag.Parse()
+
 	_ = logger
 
-	var cfg smartWalletConfig
-	if err = config.GetConfigFromVault(ctx, "smart-wallet", &cfg); err != nil {
-		if fErr := config.GetConfigFromFile(&cfg, "../../config.json"); fErr != nil {
-			return multierr.Combine(
-				fmt.Errorf("could not read config from vault: %w", err),
-				fmt.Errorf("could not read config from file: %w", fErr),
-			)
+	var cfg *smartWalletConfig
+	{
+		cfg, err = config.GetConfigFromVaultAndFile[smartWalletConfig](ctx, "smart-wallet", *cfgPath)
+		if err != nil {
+			return err
 		}
 	}
 
-	connectionString := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%d/%s",
-		cfg.DB.User, cfg.DB.Pass, cfg.DB.Host, cfg.DB.Port, cfg.DB.Name,
-	)
-
-	if err = repository.MigrateUp(connectionString); err != nil {
-		logger.Error(
-			"no migration",
-			zap.Error(fmt.Errorf("migration failed: %w", err)),
-		)
-	}
-
 	var db *sql.DB
-	db, err = apmsql.Open("postgres", connectionString)
-	if err != nil {
-		return fmt.Errorf("could not open db connection: %w", err)
+	{
+		sslMode := "disable"
+		if cfg.DB.SSLEnabled {
+			sslMode = "required"
+		}
+
+		connectionString := fmt.Sprintf(
+			"user=%s password=%s host=%s port=%d dbname=%s sslmode=%s",
+			cfg.DB.User, cfg.DB.Pass, cfg.DB.Host, cfg.DB.Port, cfg.DB.Name, sslMode,
+		)
+
+		db, err = apmsql.Open(
+			"pgx",
+			fmt.Sprintf("%s search_path=smart-wallet,wallet", connectionString),
+		)
+		if err != nil {
+			return fmt.Errorf("could not open db connection: %w", err)
+		}
+
+		db.SetConnMaxIdleTime(time.Minute * 30)
+		db.SetConnMaxLifetime(time.Hour)
+		db.SetMaxIdleConns(25)
+		db.SetMaxOpenConns(25)
+
+		defer func() {
+			err = multierr.Combine(err, db.Close())
+		}()
+
+		if _, err := db.Exec(`CREATE SCHEMA IF NOT EXISTS "smart-wallet";`); err != nil {
+			return err
+		}
+
+		if _, err := db.Exec(`CREATE SCHEMA IF NOT EXISTS "wallet";`); err != nil {
+			return err
+		}
+
+		err = repository.MigrateUp(fmt.Sprintf("%s search_path=smart-wallet", connectionString))
+		if err != nil {
+			return err
+		}
+
+		err = walletrepository.MigrateUp(fmt.Sprintf("%s search_path=wallet", connectionString))
+		if err != nil {
+			return err
+		}
 	}
-
-	db.SetConnMaxIdleTime(time.Minute * 30)
-	db.SetConnMaxLifetime(time.Hour)
-	db.SetMaxIdleConns(25)
-	db.SetMaxOpenConns(25)
-
-	defer func() {
-		err = multierr.Combine(err, db.Close())
-	}()
 
 	// TODO: initialize service
 
@@ -110,7 +138,7 @@ func run(ctx context.Context) (err error) {
 		return
 	}
 	var svc = service.NewSmartWallet(db)
-	engine := server.ReasonableEngine(logger)
+	engine := server.ReasonableEngine()
 	api.NewServer(svc, engine, jwsGetter)
 
 	consulHost := cfg.ConsulAddress
@@ -127,11 +155,9 @@ func run(ctx context.Context) (err error) {
 			ServicePort:    cfg.Port,
 		},
 		&http.Client{Timeout: 15 * time.Second},
-		logger,
 		func() error {
 			return server.WithServer(
 				ctx,
-				logger,
 				server.SetAddress(cfg.Address, cfg.Port),
 				server.SetHandler(engine),
 			)

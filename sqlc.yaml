@@ -8,3 +8,18 @@ packages:
     emit_interface: true
     emit_json_tags: true
     emit_empty_slices: true
+overrides:
+  - column: "routine_transaction_policies.amount"
+    go_type: "git.digitus.me/prosperus/protocol/types.Balance"
+  - column: "routine_transaction_policies.recipient"
+    go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"
+  - column: "routine_transaction_policies.nym_id"
+    go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"
+  - column: "transaction_trigger_policies.amount"
+    go_type: "git.digitus.me/prosperus/protocol/types.Balance"
+  - column: "transaction_trigger_policies.targeted_balance"
+    go_type: "git.digitus.me/prosperus/protocol/types.Balance"
+  - column: "transaction_trigger_policies.recipient"
+    go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"
+  - column: "transaction_trigger_policies.nym_id"
+    go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"

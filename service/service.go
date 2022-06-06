@@ -3,14 +3,12 @@ package service
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
-	ptclTypes "git.digitus.me/prosperus/protocol/types"
 )
 
 type SmartWallet interface {
@@ -46,51 +44,46 @@ func NewSmartWallet(db *sql.DB) SmartWallet {
 	return &SmartWalletStd{DB: db}
 }
 
-func (r *SmartWalletStd) GetRoutineTransactionPolicy(ctx context.Context, pk identity.PublicKey, id int) (*types.RoutineTransactionPolicy, error) {
-	rtp, err := repository.New(r.DB).GetRTP(ctx, int64(id))
+func (r *SmartWalletStd) GetRoutineTransactionPolicy(
+	ctx context.Context, pk identity.PublicKey, id int,
+) (*types.RoutineTransactionPolicy, error) {
+	rtp, err := repository.New(r.DB).GetRTP(ctx, repository.GetRTPParams{
+		NymID: pk,
+		ID:    int64(id),
+	})
 	if err != nil {
 		return nil, err
 	}
-	var balance map[ptclTypes.UnitID]int64
-	err = json.Unmarshal(rtp.Amount, &balance)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal balance %w", err)
-	}
-	recipient, err := identity.PublicKeyFromString(rtp.Recipient)
-	if err != nil {
-		return nil, fmt.Errorf("could not get public key from recipient %w", err)
-	}
+
 	return &types.RoutineTransactionPolicy{
 		Name:              rtp.Name,
 		Description:       rtp.Description,
 		ScheduleStartDate: rtp.ScheduleStartDate,
 		ScheduleEndDate:   rtp.ScheduleEndDate,
-		Amount:            balance,
+		Amount:            rtp.Amount,
 		Frequency:         rtp.Frequency,
 		NymID:             pk,
-		Recipient:         *recipient,
+		Recipient:         rtp.Recipient,
 	}, nil
 
 }
 
-func (r *SmartWalletStd) CreateRoutineTransactionPolicy(ctx context.Context, rtp types.RoutineTransactionPolicy) error {
-	println("fucking thing wont work")
-	amount, err := rtp.Amount.MarshalJSON()
-	if err != nil {
-		return fmt.Errorf("could not marshal amount: %w", err)
-	}
+func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
+	ctx context.Context, rtp types.RoutineTransactionPolicy,
+) error {
 	if _, err := repository.New(r.DB).CreateRTP(ctx, repository.CreateRTPParams{
 		Name:              rtp.Name,
 		Description:       rtp.Description,
 		ScheduleStartDate: rtp.ScheduleStartDate,
 		ScheduleEndDate:   rtp.ScheduleEndDate,
-		Amount:            amount,
+		Amount:            rtp.Amount,
 		Frequency:         rtp.Frequency,
-		NymID:             rtp.NymID.String(),
-		Recipient:         rtp.Recipient.String(),
+		NymID:             rtp.NymID,
+		Recipient:         rtp.Recipient,
 	}); err != nil {
 		return fmt.Errorf("could not insert RTP: %w", err)
 	}
+
 	return nil
 }
 
@@ -98,62 +91,51 @@ func (r *SmartWalletStd) CreateTransactionTriggerPolicy(
 	ctx context.Context, ttp types.TransactionTriggerPolicy,
 ) error {
 	println("here")
-	balance, amount, err := marshalBoth(ttp.TargetedBalance, ttp.Amount)
-	if err != nil {
-		return fmt.Errorf("could not marshal balances: %w", err)
-	}
-
 	if _, err := repository.New(r.DB).CreateTTP(ctx, repository.CreateTTPParams{
-		NymID:           ttp.NymID.String(),
+		NymID:           ttp.NymID,
 		Name:            ttp.Name,
-		Recipient:       ttp.Recipient.String(),
+		Recipient:       ttp.Recipient,
 		Description:     ttp.Description,
-		TargetedBalance: balance,
-		Amount:          amount,
+		TargetedBalance: ttp.TargetedBalance,
+		Amount:          ttp.Amount,
 	}); err != nil {
 		return fmt.Errorf("could not insert TTP: %w", err)
 	}
 
 	return nil
 }
-func (r *SmartWalletStd) UpdateRoutineTransactionPolicy(c context.Context, rtp types.RoutineTransactionPolicy) error {
-	amount, err := rtp.Amount.MarshalJSON()
-	if err != nil {
-		return fmt.Errorf("could not marshal amount: %w", err)
-	}
+func (r *SmartWalletStd) UpdateRoutineTransactionPolicy(
+	ctx context.Context, rtp types.RoutineTransactionPolicy,
+) error {
 	arg := repository.UpdateRTPParams{
 		ID:                int64(rtp.ID),
-		NymID:             rtp.NymID.String(),
-		Recipient:         rtp.Recipient.String(),
+		NymID:             rtp.NymID,
+		Recipient:         rtp.Recipient,
 		Name:              rtp.Name,
 		Description:       rtp.Description,
 		Frequency:         rtp.Frequency,
 		ScheduleStartDate: rtp.ScheduleStartDate,
 		ScheduleEndDate:   rtp.ScheduleEndDate,
-		Amount:            amount,
+		Amount:            rtp.Amount,
 	}
-	if _, err := repository.New(r.DB).UpdateRTP(c, arg); err != nil {
+	if _, err := repository.New(r.DB).UpdateRTP(ctx, arg); err != nil {
 		return fmt.Errorf("could not update RTP %w", err)
 	}
+
 	return nil
 }
 
 func (r *SmartWalletStd) UpdateTransactionTriggerPolicy(
 	ctx context.Context, ttp types.TransactionTriggerPolicy,
 ) error {
-	balance, amount, err := marshalBoth(ttp.TargetedBalance, ttp.Amount)
-	if err != nil {
-		return fmt.Errorf("could not unmarshal balances: %w", err)
-	}
-
 	arg := repository.UpdateTTPParams{
 		ID:              int64(ttp.ID),
-		NymID:           ttp.NymID.String(),
-		Recipient:       ttp.Recipient.String(),
+		NymID:           ttp.NymID,
+		Recipient:       ttp.Recipient,
 		Name:            ttp.Name,
 		Description:     ttp.Description,
-		TargetedBalance: balance,
-		Amount:          amount,
+		TargetedBalance: ttp.TargetedBalance,
+		Amount:          ttp.Amount,
 	}
 
 	if _, err := repository.New(r.DB).UpdateTTP(ctx, arg); err != nil {
@@ -171,17 +153,13 @@ func (r *SmartWalletStd) GetTransactionTriggerPolicy(
 		return nil, err
 	}
 
-	balance, amount, err := unmarshalBoth(ttp.TargetedBalance, ttp.Amount)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal balances: %w", err)
-	}
-
 	return &types.TransactionTriggerPolicy{
 		Name:            ttp.Name,
 		Description:     ttp.Description,
 		NymID:           pk,
-		TargetedBalance: balance,
-		Amount:          amount,
+		TargetedBalance: ttp.TargetedBalance,
+		Amount:          ttp.Amount,
+		Recipient:       ttp.Recipient,
 	}, nil
 }
 
@@ -189,37 +167,33 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.RoutineTransactionPolicy, int, error) {
 	rtps, err := repository.New(r.DB).ListRTP(ctx, repository.ListRTPParams{
-		NymID:  nym.String(),
+		NymID:  nym,
 		Limit:  int32(itemsPerPage),
-		Offset: (int32(page) - 1) * int32(itemsPerPage),
+		Offset: int32(page) * int32(itemsPerPage),
 	})
 	if err != nil {
 		return nil, 0, nil
 	}
 
-	rts := make([]types.RoutineTransactionPolicy, 0, len(rtps))
-	total := int(rtps[0].FullCount)
+	var (
+		total int
+		rts   = make([]types.RoutineTransactionPolicy, 0, len(rtps))
+	)
+
 	for _, rtp := range rtps {
-		amount, err := unmarshalAmount(rtp.Amount)
-		if err != nil {
-			return nil, 0, fmt.Errorf("could not unmarshal amount: %w", err)
-		}
-		recipient, err := identity.PublicKeyFromString(rtp.Recipient)
-		if err != nil {
-			return nil, 0, fmt.Errorf("could not get public key %w", err)
-		}
+		total = int(rtp.FullCount)
+
 		rts = append(rts, types.RoutineTransactionPolicy{
 			ID:                int(rtp.ID),
 			Name:              rtp.Name,
 			Description:       rtp.Description,
 			NymID:             nym,
-			Recipient:         *recipient,
-			Amount:            amount,
+			Recipient:         rtp.Recipient,
+			Amount:            rtp.Amount,
 			Frequency:         rtp.Frequency,
 			ScheduleStartDate: rtp.ScheduleStartDate,
 			ScheduleEndDate:   rtp.ScheduleEndDate,
 		})
-
 	}
 	return rts, total, nil
 }
@@ -228,33 +202,27 @@ func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.TransactionTriggerPolicy, int, error) {
 	ttps, err := repository.New(r.DB).ListTTP(ctx, repository.ListTTPParams{
-		NymID:  nym.String(),
+		NymID:  nym,
 		Limit:  int32(itemsPerPage),
-		Offset: (int32(page) - 1) * int32(itemsPerPage),
+		Offset: int32(page) * int32(itemsPerPage),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
+
 	ts := make([]types.TransactionTriggerPolicy, 0, len(ttps))
-	total := int(ttps[0].FullCount)
+	var total int
 	for _, ttp := range ttps {
-		balance, amount, err := unmarshalBoth(ttp.TargetedBalance, ttp.Amount)
-		if err != nil {
-			return nil, 0, fmt.Errorf("could not unmarshal balances: %w", err)
-		}
-		recipient, err := identity.PublicKeyFromString(ttp.Recipient)
-		if err != nil {
-			return nil, 0, fmt.Errorf("could not get public key %w", err)
-		}
+		total = int(ttp.FullCount)
 
 		ts = append(ts, types.TransactionTriggerPolicy{
 			ID:              int(ttp.ID),
 			Name:            ttp.Name,
 			Description:     ttp.Description,
 			NymID:           nym,
-			TargetedBalance: balance,
-			Recipient:       *recipient,
-			Amount:          amount,
+			TargetedBalance: ttp.TargetedBalance,
+			Recipient:       ttp.Recipient,
+			Amount:          ttp.Amount,
 		})
 	}
 
