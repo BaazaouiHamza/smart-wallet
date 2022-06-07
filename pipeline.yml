@@ -1,8 +1,8 @@
-projectGroup: prosperus
+projectGroup: pfe
 projectName: smart-wallet
 
 ### Slack
-channel: git_prosperus
+channel: git_pfe
 
 ### Test
 runTests: true
