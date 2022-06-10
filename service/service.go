@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
+	"git.digitus.me/prosperus/publisher"
+	"github.com/nsqio/go-nsq"
 )
 
 type SmartWallet interface {
@@ -82,6 +85,19 @@ func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
 		Recipient:         rtp.Recipient,
 	}); err != nil {
 		return fmt.Errorf("could not insert RTP: %w", err)
+	}
+	config := publisher.NewNSQConfig()
+	p, err := nsq.NewProducer("127.0.0.1:4150", config)
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(rtp)
+	if err != nil {
+		return err
+	}
+	err = p.Publish("Add-Routine-Transaction-Policy", data)
+	if err != nil {
+		return err
 	}
 
 	return nil
