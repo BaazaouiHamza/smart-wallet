@@ -18,6 +18,8 @@ import (
 	"git.digitus.me/pfe/smart-wallet/api"
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/service"
+	"git.digitus.me/prosperus/publisher"
+	"github.com/nsqio/go-nsq"
 	"go.elastic.co/apm/module/apmhttp"
 	"go.elastic.co/apm/module/apmsql"
 	_ "go.elastic.co/apm/module/apmsql/pgxv4"
@@ -137,7 +139,12 @@ func run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	var svc = service.NewSmartWallet(db)
+	config := publisher.NewNSQConfig()
+	p, err := nsq.NewProducer("127.0.0.1:4150", config)
+	if err != nil {
+		return
+	}
+	var svc = service.NewSmartWallet(db, p)
 	engine := server.ReasonableEngine()
 	api.NewServer(svc, engine, jwsGetter)
 

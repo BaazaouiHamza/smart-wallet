@@ -10,7 +10,7 @@ require (
 	github.com/Boostport/migration/driver/postgres v1.0.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/nsqio/go-nsq v1.1.0
-	github.com/robfig/cron v1.2.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.10.1
 	github.com/swaggo/files v0.0.0-20210815190702-a29dd2bc99b2
 	github.com/swaggo/gin-swagger v1.4.1

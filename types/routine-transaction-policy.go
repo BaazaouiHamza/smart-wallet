@@ -17,4 +17,5 @@ type RoutineTransactionPolicy struct {
 	ScheduleEndDate   time.Time          `json:"scheduleEndDate"`
 	Frequency         string             `json:"frequency"`
 	Amount            ptclTypes.Balance  `json:"amount"`
+	RequestType       string             `json:"requestType"`
 }

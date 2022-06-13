@@ -10,7 +10,6 @@ import (
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
-	"git.digitus.me/prosperus/publisher"
 	"github.com/nsqio/go-nsq"
 )
 
@@ -41,10 +40,13 @@ type SmartWallet interface {
 
 var _ SmartWallet = (*SmartWalletStd)(nil)
 
-type SmartWalletStd struct{ DB *sql.DB }
+type SmartWalletStd struct {
+	DB *sql.DB
+	p  *nsq.Producer
+}
 
-func NewSmartWallet(db *sql.DB) SmartWallet {
-	return &SmartWalletStd{DB: db}
+func NewSmartWallet(db *sql.DB, p *nsq.Producer) SmartWallet {
+	return &SmartWalletStd{DB: db, p: p}
 }
 
 func (r *SmartWalletStd) GetRoutineTransactionPolicy(
@@ -74,7 +76,7 @@ func (r *SmartWalletStd) GetRoutineTransactionPolicy(
 func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
 	ctx context.Context, rtp types.RoutineTransactionPolicy,
 ) error {
-	if _, err := repository.New(r.DB).CreateRTP(ctx, repository.CreateRTPParams{
+	Rtp, err := repository.New(r.DB).CreateRTP(ctx, repository.CreateRTPParams{
 		Name:              rtp.Name,
 		Description:       rtp.Description,
 		ScheduleStartDate: rtp.ScheduleStartDate,
@@ -83,19 +85,26 @@ func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
 		Frequency:         rtp.Frequency,
 		NymID:             rtp.NymID,
 		Recipient:         rtp.Recipient,
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("could not insert RTP: %w", err)
 	}
-	config := publisher.NewNSQConfig()
-	p, err := nsq.NewProducer("127.0.0.1:4150", config)
+	data, err := json.Marshal(types.RoutineTransactionPolicy{
+		ID:                int(Rtp.ID),
+		Description:       rtp.Description,
+		Name:              rtp.Name,
+		ScheduleStartDate: rtp.ScheduleStartDate,
+		ScheduleEndDate:   rtp.ScheduleEndDate,
+		Frequency:         rtp.Frequency,
+		Amount:            rtp.Amount,
+		NymID:             rtp.NymID,
+		Recipient:         rtp.Recipient,
+		RequestType:       "POST",
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("could not marshal data %w", err)
 	}
-	data, err := json.Marshal(rtp)
-	if err != nil {
-		return err
-	}
-	err = p.Publish("Add-Routine-Transaction-Policy", data)
+	err = r.p.Publish("Add-Routine-Transaction-Policy", data)
 	if err != nil {
 		return err
 	}
@@ -137,7 +146,23 @@ func (r *SmartWalletStd) UpdateRoutineTransactionPolicy(
 	if _, err := repository.New(r.DB).UpdateRTP(ctx, arg); err != nil {
 		return fmt.Errorf("could not update RTP %w", err)
 	}
-
+	data, err := json.Marshal(types.RoutineTransactionPolicy{
+		ID:                rtp.ID,
+		NymID:             rtp.NymID,
+		Recipient:         rtp.Recipient,
+		Amount:            rtp.Amount,
+		ScheduleStartDate: rtp.ScheduleStartDate,
+		ScheduleEndDate:   rtp.ScheduleEndDate,
+		Frequency:         rtp.Frequency,
+		RequestType:       "PUT",
+	})
+	if err != nil {
+		return fmt.Errorf("could not marshal data %w", err)
+	}
+	err = r.p.Publish("Add-Routine-Transaction-Policy", data)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -250,7 +275,18 @@ func (r *SmartWalletStd) DeletePolicy(ctx context.Context, pk identity.PublicKey
 	if err := repository.New(r.DB).DeleteUserPolicy(ctx, int64(id)); err != nil {
 		return fmt.Errorf("could not delete policy %d: %w", id, err)
 	}
+	data, err := json.Marshal(types.RoutineTransactionPolicy{
+		ID:          id,
+		RequestType: "DELETE",
+	})
+	if err != nil {
+		return fmt.Errorf("could not marshal data %w", err)
+	}
 
+	err = r.p.Publish("Add-Routine-Transaction-Policy", data)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -22,7 +22,7 @@ type RTPRequest struct {
 	Recipient         identity.PublicKey `json:"recipient" binding:"required"`
 	ScheduleStartDate time.Time          `json:"scheduleStartDate" binding:"required"`
 	ScheduleEndDate   time.Time          `json:"scheduleEndDate" binding:"required"`
-	Frequency         string             `json:"frequency" binding:"required,oneof= DAILY MONTHLY WEEKLY"`
+	Frequency         string             `json:"frequency" binding:"required,oneof= daily monthly weekly"`
 	Amount            ptclTypes.Balance  `json:"amount" binding:"required"`
 }
 

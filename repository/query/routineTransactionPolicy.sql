@@ -56,3 +56,8 @@ WHERE
   nym_id = $1
 ORDER BY
   id;
+
+  -- name: GetALlRoutinePolicies :many
+  SELECT * from routine_transaction_policies ORDER BY id;
+
+
