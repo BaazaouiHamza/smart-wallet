@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/publisher"
@@ -22,10 +23,16 @@ var mu sync.Mutex
 
 func runCronJobs(s *cron.Cron, rtp types.RoutineTransactionPolicy) {
 	var frequency = "every 5s"
-	entryId, err := s.AddFunc("@"+frequency, func() { fmt.Println("Every hour on the half hour") })
+	entryId, err := s.AddFunc("@"+frequency, func() {
+		if time.Now().After(rtp.ScheduleStartDate) && time.Now().Before(rtp.ScheduleEndDate) {
+			fmt.Println("Every hour on the half hour")
+		}
+	})
 	if err != nil {
 		log.Println(err)
 	}
+	entry := s.Entry(entryId)
+	fmt.Println(entry)
 	mu.Lock()
 	inMemoryRoutinePolicy.routinePolicy[rtp.ID] = entryId
 	mu.Unlock()
@@ -35,6 +42,7 @@ func runCronJobs(s *cron.Cron, rtp types.RoutineTransactionPolicy) {
 }
 
 func main() {
+
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	s := cron.New()
