@@ -36,9 +36,10 @@ type smartWalletConfig struct {
 		User       string `json:"user"`
 		SSLEnabled bool   `json:"sslEnabled"`
 	} `json:"db"`
-	Address       string `json:"address"`
-	Port          int    `json:"port"`
-	ConsulAddress string `json:"consulAddress"`
+	Address          string `json:"address"`
+	Port             int    `json:"port"`
+	ConsulAddress    string `json:"consulAddress"`
+	NsqLookupAddress string `json:"nsqLookUpAddress"`
 }
 
 func run(ctx context.Context) (err error) {
@@ -140,7 +141,7 @@ func run(ctx context.Context) (err error) {
 		return
 	}
 	config := publisher.NewNSQConfig()
-	p, err := nsq.NewProducer("127.0.0.1:4150", config)
+	p, err := nsq.NewProducer(cfg.NsqLookupAddress, config)
 	if err != nil {
 		return
 	}

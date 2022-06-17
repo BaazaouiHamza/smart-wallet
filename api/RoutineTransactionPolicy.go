@@ -198,7 +198,7 @@ type listRoutineTransactionPoliciesResponse struct {
 // @Success 200 {object} listRoutineTransactionPoliciesResponse
 // @Router /api/:nym-id/routine-transaction-policy [GET]
 func (s *Server) listRoutineTransactionPolicies(c *gin.Context, pk identity.PublicKey) {
-	fmt.Println(c.Request.Header)
+	fmt.Println("HEADER", c.Request.Header)
 	logger := middleware.GetLogger(c)
 	logger.Debug("Authorization", zap.String("", c.Request.Header.Get("Authorization")))
 	var reqForm listRoutineTransactionPolicies

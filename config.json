@@ -7,5 +7,6 @@
     "port": 5432
   },
   "port": 4000,
-  "consulAddress": "http://testing.prosperus.tech:8500"
+  "consulAddress": "http://testing.prosperus.tech:8500",
+  "nsqLookUpAddress":"127.0.0.1:4150"
 }

@@ -20,7 +20,6 @@ type SmartWallet interface {
 	ListRoutineTransactionPolicies(
 		ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 	) ([]types.RoutineTransactionPolicy, int, error)
-	GetAllRoutinePolicies(context.Context) ([]types.RoutineTransactionPolicy, error)
 
 	CreateTransactionTriggerPolicy(context.Context, types.TransactionTriggerPolicy) error
 	UpdateTransactionTriggerPolicy(context.Context, types.TransactionTriggerPolicy) error
@@ -48,29 +47,6 @@ type SmartWalletStd struct {
 
 func NewSmartWallet(db *sql.DB, p *nsq.Producer) SmartWallet {
 	return &SmartWalletStd{DB: db, p: p}
-}
-
-func (r *SmartWalletStd) GetAllRoutinePolicies(ctx context.Context) ([]types.RoutineTransactionPolicy, error) {
-	rtps, err := repository.New(r.DB).GetALlRoutinePolicies(ctx)
-	if err != nil {
-		return nil, err
-	}
-	rts := make([]types.RoutineTransactionPolicy, 0, len(rtps))
-
-	for _, rtp := range rtps {
-		rts = append(rts, types.RoutineTransactionPolicy{
-			ID:                int(rtp.ID),
-			NymID:             rtp.NymID,
-			Recipient:         rtp.Recipient,
-			Amount:            rtp.Amount,
-			Frequency:         rtp.Frequency,
-			ScheduleStartDate: rtp.ScheduleStartDate,
-			ScheduleEndDate:   rtp.ScheduleEndDate,
-			RequestType:       "POST",
-		})
-	}
-
-	return rts, nil
 }
 
 func (r *SmartWalletStd) GetRoutineTransactionPolicy(
@@ -123,7 +99,7 @@ func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
 		Amount:            rtp.Amount,
 		NymID:             rtp.NymID,
 		Recipient:         rtp.Recipient,
-		RequestType:       "POST",
+		RequestType:       "NEW",
 	})
 	if err != nil {
 		return fmt.Errorf("could not marshal data %w", err)
@@ -178,7 +154,7 @@ func (r *SmartWalletStd) UpdateRoutineTransactionPolicy(
 		ScheduleStartDate: rtp.ScheduleStartDate,
 		ScheduleEndDate:   rtp.ScheduleEndDate,
 		Frequency:         rtp.Frequency,
-		RequestType:       "PUT",
+		RequestType:       "NEW",
 	})
 	if err != nil {
 		return fmt.Errorf("could not marshal data %w", err)

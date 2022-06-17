@@ -3,8 +3,8 @@ module git.digitus.me/pfe/smart-wallet
 go 1.18
 
 require (
-	git.digitus.me/library/prosper-kit v0.12.13
-	git.digitus.me/prosperus/protocol v1.9.1
+	git.digitus.me/library/prosper-kit v0.12.14
+	git.digitus.me/prosperus/protocol v1.10.0
 	git.digitus.me/prosperus/publisher v1.0.8
 	github.com/Boostport/migration v1.0.1
 	github.com/Boostport/migration/driver/postgres v1.0.0

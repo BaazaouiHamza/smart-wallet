@@ -52,6 +52,8 @@ contrib.go.opencensus.io/exporter/stackdriver v0.13.4/go.mod h1:aXENhDJ1Y4lIg4EU
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 git.digitus.me/library/prosper-kit v0.12.13 h1:MM7onmpqj9EZqBCU+HugE2FN/x43K1oBY/8Tdm106Qs=
 git.digitus.me/library/prosper-kit v0.12.13/go.mod h1:LhAu3q4ySHPGhbz7/V+CESp/wb9ih2NyE4jxeho9kys=
+git.digitus.me/library/prosper-kit v0.12.14 h1:PT3FHRVXayTI9lbJikl59gbMDHWvjp0x75nCTWgoIcM=
+git.digitus.me/library/prosper-kit v0.12.14/go.mod h1:ajXYnk4u9CXWilpOYa+H2UAQl//T166FUMmd411kTRQ=
 git.digitus.me/prosperus/http/v2 v2.3.1/go.mod h1:oDbRP0VDCKKi08126A7FAGOmJEJIdF+1ZefIXJ2Xe4o=
 git.digitus.me/prosperus/http/v2 v2.4.5/go.mod h1:2aN+/sa53mptQ1su1TrOZSm5X/86fZdQIIHc74wO9AU=
 git.digitus.me/prosperus/kindi v0.0.4/go.mod h1:EjE7bmvCk5v007V09MvGJRJ3aOCTGp0WCocRN/4DUzM=
@@ -62,6 +64,8 @@ git.digitus.me/prosperus/protocol v1.4.6/go.mod h1:2ydZ0pfhG/WHXdrRrwsf7gePKXbgD
 git.digitus.me/prosperus/protocol v1.4.8/go.mod h1:2ydZ0pfhG/WHXdrRrwsf7gePKXbgDn7UeGmEigi5DaM=
 git.digitus.me/prosperus/protocol v1.9.1 h1:do8O6AyJDCUodfytElE0wpWSgAT+YLo2to/WM589Jh4=
 git.digitus.me/prosperus/protocol v1.9.1/go.mod h1:oUiWKO3eiFUslgle8jTPxmvyoxQMnFBC3I13t8nXnqw=
+git.digitus.me/prosperus/protocol v1.10.0 h1:7/x7GFVEpa0OqvLkmoh0ahjROLDrwmRjtC8ECQ7Zkuw=
+git.digitus.me/prosperus/protocol v1.10.0/go.mod h1:oUiWKO3eiFUslgle8jTPxmvyoxQMnFBC3I13t8nXnqw=
 git.digitus.me/prosperus/publisher v1.0.8 h1:auwby4rMWIg4caOnxs9Pl6GyaL0/zJUxxIFwNv8oAh0=
 git.digitus.me/prosperus/publisher v1.0.8/go.mod h1:6aMaXvU67UheDnuxrfoI1lXCWQUZJOpdsOx+BbS9pJo=
 git.digitus.me/prosperus/viper v1.4.2/go.mod h1:lqrCHh9ghSb6+8Hqe9l+EvmugZdlce+XVL9DWHfJbgk=
