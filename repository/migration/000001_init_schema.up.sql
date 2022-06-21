@@ -25,13 +25,9 @@ INHERITS (
   "user_policies"
 );
 
-CREATE TABLE "transactions" (
-  "id" BIGSERIAL PRIMARY KEY,
+CREATE TABLE "policy_events" (
   "nym_id" VARCHAR NOT NULL,
-  "transfer_sequence" INT UNIQUE NOT NULL,
-  "transfer" JSONB UNIQUE NOT NULL,
-  "policy_id" BIGINT NOT NULL
+  "transfer_sequence" BIGINT NOT NULL,
+  "policy_id" BIGINT NOT NULL REFERENCES "user_policies" ("id"),
+  PRIMARY KEY ("nym_id", "transfer_sequence")
 );
-
-ALTER TABLE "transactions"
-  ADD FOREIGN KEY ("policy_id") REFERENCES "user_policies" ("id");

@@ -72,6 +72,7 @@ func (im *InMemory) runCronJobs(
 
 	entryId, err := im.scheduler.AddFunc("@"+frequency, func() {
 		now := time.Now()
+		// TODO: delete job if policy has expired
 		if now.After(rtp.ScheduleStartDate) && now.Before(rtp.ScheduleEndDate) {
 			if err := im.publisher.Publish("transactions", data); err != nil {
 				logger.Error("could not publish message", zap.Any("policy", rtp), zap.Error(err))
