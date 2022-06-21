@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -12,6 +11,8 @@ import (
 	prospercontext "git.digitus.me/library/prosper-kit/context"
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/types"
+	"git.digitus.me/prosperus/protocol/identity"
+	ptclTypes "git.digitus.me/prosperus/protocol/types"
 	"git.digitus.me/prosperus/publisher"
 	"github.com/nsqio/go-nsq"
 	"github.com/robfig/cron/v3"
@@ -22,61 +23,85 @@ type RTPTicker interface {
 	HandleNewPolicy(context.Context, types.RoutineTransactionPolicy) error
 	HandleDeletePolicy(context.Context, int) error
 	StartAllRoutinePolicies(context.Context) error
-	HandleRTPMessages(rtpTicker RTPTicker) func(context.Context, *nsq.Message) error
 }
 
 type InMemory struct {
-	RoutinePolicy map[int]cron.EntryID
-	Mu            sync.Mutex
-	DB            *sql.DB
-	S             *cron.Cron
-	P             *nsq.Producer
+	routinePolicy map[int]cron.EntryID
+	mutex         sync.RWMutex
+	db            *sql.DB
+	scheduler     *cron.Cron
+	publisher     *nsq.Producer
 }
 
 var _ (RTPTicker) = (*InMemory)(nil)
 
 func NewRTPTicker(db *sql.DB, s *cron.Cron, p *nsq.Producer) RTPTicker {
-	return &InMemory{DB: db, RoutinePolicy: make(map[int]cron.EntryID), Mu: sync.Mutex{}, S: s, P: p}
+	return &InMemory{
+		db:            db,
+		routinePolicy: map[int]cron.EntryID{},
+		mutex:         sync.RWMutex{},
+		scheduler:     s,
+		publisher:     p,
+	}
 }
 
-func (im *InMemory) runCronJobs(ctx context.Context, s *cron.Cron, rtp types.RoutineTransactionPolicy) error {
+func (im *InMemory) runCronJobs(
+	ctx context.Context, rtp types.RoutineTransactionPolicy,
+) error {
 	logger := prospercontext.GetLogger(ctx)
-	var frequency = "every 5s"
-	data, err := json.Marshal(rtp)
+
+	// TODO: use actual frequency from rtp
+	frequency := "every 5s"
+
+	negativeAmount := ptclTypes.Balance{}
+
+	for u, a := range rtp.Amount {
+		negativeAmount[u] = -a
+	}
+
+	data, err := json.Marshal(types.TriggerMessage{
+		PolicyID: rtp.ID,
+		Amounts: map[identity.PublicKey]ptclTypes.Balance{
+			rtp.NymID:     negativeAmount,
+			rtp.Recipient: rtp.Amount,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("could not marshal data %w", err)
 	}
-	entryId, err := s.AddFunc("@"+frequency, func() {
-		if time.Now().After(rtp.ScheduleStartDate) && time.Now().Before(rtp.ScheduleEndDate) {
-			err = im.P.Publish("transactions", data)
-			if err != nil {
-				logger.Error("could not Publish")
+
+	entryId, err := im.scheduler.AddFunc("@"+frequency, func() {
+		now := time.Now()
+		if now.After(rtp.ScheduleStartDate) && now.Before(rtp.ScheduleEndDate) {
+			if err := im.publisher.Publish("transactions", data); err != nil {
+				logger.Error("could not publish message", zap.Any("policy", rtp), zap.Error(err))
 			}
 		}
 	})
 	if err != nil {
 		return err
 	}
+
 	func() {
-		im.Mu.Lock()
-		defer im.Mu.Unlock()
-		im.RoutinePolicy[rtp.ID] = entryId
+		im.mutex.Lock()
+		defer im.mutex.Unlock()
+		im.routinePolicy[rtp.ID] = entryId
+		logger.Debug("", zap.Any("RoutinePolicyMap", im.routinePolicy))
 	}()
-	// never use fmt package for logging use logger from context with prospercontext.GetLogger
-	logger.Debug("", zap.String("RoutinePolicyMap", fmt.Sprint(im.RoutinePolicy)))
-	// never use fmt package for logging use logger from context with prospercontext.GetLogger
-	logger.Debug("", zap.String("RoutinePolicy", fmt.Sprint(rtp)))
+
+	logger.Debug("", zap.Any("RoutinePolicy", rtp))
+
 	return nil
 }
 
-func (im *InMemory) HandleRTPMessages(rtpTicker RTPTicker) func(ctx context.Context, m *nsq.Message) error {
+func HandleRTPMessages(rtpTicker RTPTicker) func(ctx context.Context, m *nsq.Message) error {
 	return func(ctx context.Context, msg *nsq.Message) error {
 		logger := prospercontext.GetLogger(ctx)
 		var data types.RoutineTransactionPolicy
-		err := publisher.Decode(msg.Body, data)
-		if err != nil {
+		if err := publisher.Decode(msg.Body, data); err != nil {
 			return err
 		}
+
 		switch data.RequestType {
 		case "NEW":
 			return rtpTicker.HandleNewPolicy(ctx, data)
@@ -84,43 +109,41 @@ func (im *InMemory) HandleRTPMessages(rtpTicker RTPTicker) func(ctx context.Cont
 			return rtpTicker.HandleDeletePolicy(ctx, data.ID)
 		default:
 			// log a warning about unknown type
-			logger.Warn("unknown request type")
+			logger.Warn("unknown request type", zap.Any("message", data))
 			return nil
 		}
 	}
 }
 
 func (im *InMemory) HandleNewPolicy(ctx context.Context, rtp types.RoutineTransactionPolicy) error {
-	if entryId, ok := im.RoutinePolicy[rtp.ID]; ok {
-		im.S.Remove(entryId)
-		delete(im.RoutinePolicy, rtp.ID)
-		fmt.Println(im.RoutinePolicy)
-		im.runCronJobs(ctx, im.S, rtp)
-	} else {
-		im.runCronJobs(ctx, im.S, rtp)
+	if err := im.HandleDeletePolicy(ctx, rtp.ID); err != nil {
+		return err
 	}
+
+	im.runCronJobs(ctx, rtp)
+
 	return nil
 }
 
 func (im *InMemory) HandleDeletePolicy(ctx context.Context, id int) error {
-	if entrydId, ok := im.RoutinePolicy[id]; ok {
-		im.S.Remove(entrydId)
-		delete(im.RoutinePolicy, id)
-	} else {
-		return errors.New("could not find entryId for the given id")
+	im.mutex.Lock()
+	defer im.mutex.Unlock()
+	if entrydId, ok := im.routinePolicy[id]; ok {
+		im.scheduler.Remove(entrydId)
+		delete(im.routinePolicy, id)
 	}
 
 	return nil
 }
+
 func (im *InMemory) StartAllRoutinePolicies(ctx context.Context) error {
-	rtps, err := repository.New(im.DB).GetALlRoutinePolicies(ctx)
+	rtps, err := repository.New(im.db).GetALlRoutinePolicies(ctx)
 	if err != nil {
 		return err
 	}
-	rts := make([]types.RoutineTransactionPolicy, 0, len(rtps))
 
-	for i, rtp := range rtps {
-		rts = append(rts, types.RoutineTransactionPolicy{
+	for _, rtp := range rtps {
+		im.runCronJobs(ctx, types.RoutineTransactionPolicy{
 			ID:                int(rtp.ID),
 			NymID:             rtp.NymID,
 			Recipient:         rtp.Recipient,
@@ -130,7 +153,6 @@ func (im *InMemory) StartAllRoutinePolicies(ctx context.Context) error {
 			ScheduleEndDate:   rtp.ScheduleEndDate,
 			RequestType:       "NEW",
 		})
-		im.runCronJobs(ctx, im.S, rts[i])
 	}
 
 	return nil

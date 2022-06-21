@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"git.digitus.me/pfe/smart-wallet/internal"
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
@@ -41,12 +42,12 @@ type SmartWallet interface {
 var _ SmartWallet = (*SmartWalletStd)(nil)
 
 type SmartWalletStd struct {
-	DB *sql.DB
-	p  *nsq.Producer
+	DB        *sql.DB
+	publisher *nsq.Producer
 }
 
 func NewSmartWallet(db *sql.DB, p *nsq.Producer) SmartWallet {
-	return &SmartWalletStd{DB: db, p: p}
+	return &SmartWalletStd{DB: db, publisher: p}
 }
 
 func (r *SmartWalletStd) GetRoutineTransactionPolicy(
@@ -104,8 +105,8 @@ func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
 	if err != nil {
 		return fmt.Errorf("could not marshal data %w", err)
 	}
-	err = r.p.Publish("Add-Routine-Transaction-Policy", data)
-	if err != nil {
+
+	if err := r.publisher.Publish(internal.RoutineTransactionPolicyTopic, data); err != nil {
 		return err
 	}
 
@@ -159,10 +160,11 @@ func (r *SmartWalletStd) UpdateRoutineTransactionPolicy(
 	if err != nil {
 		return fmt.Errorf("could not marshal data %w", err)
 	}
-	err = r.p.Publish("Add-Routine-Transaction-Policy", data)
-	if err != nil {
+
+	if err := r.publisher.Publish(internal.RoutineTransactionPolicyTopic, data); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -283,8 +285,7 @@ func (r *SmartWalletStd) DeletePolicy(ctx context.Context, pk identity.PublicKey
 		return fmt.Errorf("could not marshal data %w", err)
 	}
 
-	err = r.p.Publish("Add-Routine-Transaction-Policy", data)
-	if err != nil {
+	if err = r.publisher.Publish(internal.RoutineTransactionPolicyTopic, data); err != nil {
 		return err
 	}
 	return nil

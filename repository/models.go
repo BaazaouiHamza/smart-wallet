@@ -14,31 +14,31 @@ type RoutineTransactionPolicy struct {
 	ID                int64              `json:"id"`
 	Name              string             `json:"name"`
 	Description       string             `json:"description"`
-	NymID             identity.PublicKey `json:"nym_id"`
+	NymID             identity.PublicKey `json:"nymID"`
 	Recipient         identity.PublicKey `json:"recipient"`
-	CreatedAt         time.Time          `json:"created_at"`
-	ScheduleStartDate time.Time          `json:"schedule_start_date"`
-	ScheduleEndDate   time.Time          `json:"schedule_end_date"`
+	CreatedAt         time.Time          `json:"createdAt"`
+	ScheduleStartDate time.Time          `json:"scheduleStartDate"`
+	ScheduleEndDate   time.Time          `json:"scheduleEndDate"`
 	Frequency         string             `json:"frequency"`
 	Amount            types.Balance      `json:"amount"`
 }
 
 type Transaction struct {
 	ID               int64           `json:"id"`
-	NymID            string          `json:"nym_id"`
-	TransferSequence int32           `json:"transfer_sequence"`
+	NymID            string          `json:"nymID"`
+	TransferSequence int32           `json:"transferSequence"`
 	Transfer         json.RawMessage `json:"transfer"`
-	PolicyID         int64           `json:"policy_id"`
+	PolicyID         int64           `json:"policyID"`
 }
 
 type TransactionTriggerPolicy struct {
 	ID              int64              `json:"id"`
 	Name            string             `json:"name"`
 	Description     string             `json:"description"`
-	NymID           identity.PublicKey `json:"nym_id"`
+	NymID           identity.PublicKey `json:"nymID"`
 	Recipient       identity.PublicKey `json:"recipient"`
-	CreatedAt       time.Time          `json:"created_at"`
-	TargetedBalance types.Balance      `json:"targeted_balance"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	TargetedBalance types.Balance      `json:"targetedBalance"`
 	Amount          types.Balance      `json:"amount"`
 }
 
@@ -46,7 +46,7 @@ type UserPolicy struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	NymID       string    `json:"nym_id"`
+	NymID       string    `json:"nymID"`
 	Recipient   string    `json:"recipient"`
-	CreatedAt   time.Time `json:"created_at"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
