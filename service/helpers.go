@@ -35,3 +35,11 @@ func unmarshalBoth(a, b []byte) (ptclTypes.Balance, ptclTypes.Balance, error) {
 
 	return x, y, json.Unmarshal(b, &y)
 }
+
+func NegativeAmount(b ptclTypes.Balance) ptclTypes.Balance {
+
+	for u, a := range b {
+		b[u] = -a
+	}
+	return b
+}

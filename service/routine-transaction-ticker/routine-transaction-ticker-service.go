@@ -77,6 +77,8 @@ func (im *InMemory) runCronJobs(
 			if err := im.publisher.Publish("transactions", data); err != nil {
 				logger.Error("could not publish message", zap.Any("policy", rtp), zap.Error(err))
 			}
+		} else if now.After(rtp.ScheduleEndDate) {
+			im.HandleDeletePolicy(ctx, rtp.ID)
 		}
 	})
 	if err != nil {
@@ -138,22 +140,25 @@ func (im *InMemory) HandleDeletePolicy(ctx context.Context, id int) error {
 }
 
 func (im *InMemory) StartAllRoutinePolicies(ctx context.Context) error {
+	now := time.Now()
 	rtps, err := repository.New(im.db).GetALlRoutinePolicies(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, rtp := range rtps {
-		im.runCronJobs(ctx, types.RoutineTransactionPolicy{
-			ID:                int(rtp.ID),
-			NymID:             rtp.NymID,
-			Recipient:         rtp.Recipient,
-			Amount:            rtp.Amount,
-			Frequency:         rtp.Frequency,
-			ScheduleStartDate: rtp.ScheduleStartDate,
-			ScheduleEndDate:   rtp.ScheduleEndDate,
-			RequestType:       "NEW",
-		})
+		if now.After(rtp.ScheduleStartDate) && now.Before(rtp.ScheduleEndDate) {
+			im.runCronJobs(ctx, types.RoutineTransactionPolicy{
+				ID:                int(rtp.ID),
+				NymID:             rtp.NymID,
+				Recipient:         rtp.Recipient,
+				Amount:            rtp.Amount,
+				Frequency:         rtp.Frequency,
+				ScheduleStartDate: rtp.ScheduleStartDate,
+				ScheduleEndDate:   rtp.ScheduleEndDate,
+				RequestType:       "NEW",
+			})
+		}
 	}
 
 	return nil

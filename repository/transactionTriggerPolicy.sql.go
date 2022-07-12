@@ -86,6 +86,43 @@ func (q *Queries) GetTTP(ctx context.Context, id int64) (TransactionTriggerPolic
 	return i, err
 }
 
+const listMatchingPolicies = `-- name: ListMatchingPolicies :many
+SELECT id, name, description, nym_id, recipient, created_at, targeted_balance, amount FROM transaction_trigger_policies WHERE nym_id = $1
+ORDER BY id
+`
+
+func (q *Queries) ListMatchingPolicies(ctx context.Context, nymID identity.PublicKey) ([]TransactionTriggerPolicy, error) {
+	rows, err := q.db.QueryContext(ctx, listMatchingPolicies, nymID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []TransactionTriggerPolicy{}
+	for rows.Next() {
+		var i TransactionTriggerPolicy
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.NymID,
+			&i.Recipient,
+			&i.CreatedAt,
+			&i.TargetedBalance,
+			&i.Amount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTTP = `-- name: ListTTP :many
 SELECT id, name, description, nym_id, recipient, created_at, targeted_balance, amount, count(*) OVER() AS full_count FROM transaction_trigger_policies WHERE nym_id = $1
 ORDER BY id

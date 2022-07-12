@@ -33,3 +33,7 @@ SELECT *, count(*) OVER() AS full_count FROM transaction_trigger_policies WHERE 
 ORDER BY id
 LIMIT $2
 OFFSET $3;
+
+-- name: ListMatchingPolicies :many
+SELECT * FROM transaction_trigger_policies WHERE nym_id = $1
+ORDER BY id;
