@@ -16,6 +16,7 @@ import (
 	"git.digitus.me/pfe/smart-wallet/internal"
 	service "git.digitus.me/pfe/smart-wallet/service/trigger-handler-service"
 	"git.digitus.me/pfe/smart-wallet/types"
+	ptclTypes "git.digitus.me/prosperus/protocol/types"
 	"git.digitus.me/prosperus/publisher"
 	"github.com/nsqio/go-nsq"
 	"go.elastic.co/apm/module/apmhttp"
@@ -124,30 +125,55 @@ func run(ctx context.Context) (err error) {
 	triggerHandler := service.NewTriggerHandler(db, p, &internal.CloudwalletClient{
 		Client: client,
 	})
-	c, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "smart-wallet-trigger", config)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		c.Stop()
-		<-c.StopChan
-	}()
 
-	c.AddHandler(func(ctx context.Context, m *nsq.Message) error {
-		var data types.TriggerMessage
-		if err := publisher.Decode(m.Body, data); err != nil {
-			return err
-		}
-		err := triggerHandler.HandleTrigger(ctx, data)
+	{
+		triggerConsumer, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "smart-wallet-trigger", config)
 		if err != nil {
 			return err
 		}
-		return nil
-	})
+		defer func() {
+			triggerConsumer.Stop()
+			<-triggerConsumer.StopChan
+		}()
 
-	err = c.ConnectToNSQLookupd(cfg.NsqLookupAddress)
-	if err != nil {
-		return err
+		triggerConsumer.AddHandler(func(ctx context.Context, m *nsq.Message) error {
+			var data types.TriggerMessage
+			if err := publisher.Decode(m.Body, data); err != nil {
+				return err
+			}
+
+			return triggerHandler.HandleTrigger(ctx, data)
+		})
+
+		if err := triggerConsumer.ConnectToNSQLookupd(cfg.NsqLookupAddress); err != nil {
+			return err
+		}
+	}
+
+	{
+		notarizationConsumer, err := publisher.NewConsumer(
+			ctx, "notarizations", "smart-wallet-trigger", config,
+		)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			notarizationConsumer.Stop()
+			<-notarizationConsumer.StopChan
+		}()
+
+		notarizationConsumer.AddHandler(func(ctx context.Context, m *nsq.Message) error {
+			var n ptclTypes.Notarization
+			if err := publisher.Decode(m.Body, n); err != nil {
+				return err
+			}
+
+			return triggerHandler.HandleNotarization(ctx, &n)
+		})
+
+		if err := notarizationConsumer.ConnectToNSQLookupd(cfg.NsqLookupAddress); err != nil {
+			return err
+		}
 	}
 
 	return nil
