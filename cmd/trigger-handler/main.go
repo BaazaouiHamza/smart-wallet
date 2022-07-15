@@ -124,7 +124,7 @@ func run(ctx context.Context) (err error) {
 	triggerHandler := service.NewTriggerHandler(db, p, &internal.CloudwalletClient{
 		Client: client,
 	})
-	c, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "Trigger", config)
+	c, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "smart-wallet-trigger", config)
 	if err != nil {
 		return err
 	}

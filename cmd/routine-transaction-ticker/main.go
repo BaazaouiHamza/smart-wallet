@@ -112,7 +112,7 @@ func run(ctx context.Context) (err error) {
 
 	config := publisher.NewNSQConfig()
 	c, err := publisher.NewConsumer(
-		context.Background(), internal.RoutineTransactionPolicyTopic, "Rtp", config,
+		context.Background(), internal.RoutineTransactionPolicyTopic, "smart-wallet-ticker", config,
 	)
 	if err != nil {
 		return err
