@@ -9,8 +9,12 @@ type SmartWalletConfig struct {
 		User       string `json:"user"`
 		SSLEnabled bool   `json:"sslEnabled"`
 	} `json:"db"`
-	Address          string `json:"address"`
-	Port             int    `json:"port"`
-	ConsulAddress    string `json:"consulAddress"`
-	NsqLookupAddress string `json:"nsqLookUpAddress"`
+	Address           string `json:"address"`
+	Port              int    `json:"port"`
+	ConsulAddress     string `json:"consulAddress"`
+	NsqLookupAddress  string `json:"nsqLookUpAddress"`
+	ClientCredentials struct {
+		ID     string `json:"id"`
+		Secret string `json:"secret"`
+	} `json:"clientCredentials"`
 }

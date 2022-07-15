@@ -5,16 +5,20 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"net/http"
 	"time"
 
 	"git.digitus.me/library/prosper-kit/application"
+	"git.digitus.me/library/prosper-kit/authentication"
 	"git.digitus.me/library/prosper-kit/config"
 	prospercontext "git.digitus.me/library/prosper-kit/context"
+	"git.digitus.me/library/prosper-kit/discovery"
 	"git.digitus.me/pfe/smart-wallet/internal"
 	service "git.digitus.me/pfe/smart-wallet/service/trigger-handler-service"
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/publisher"
 	"github.com/nsqio/go-nsq"
+	"go.elastic.co/apm/module/apmhttp"
 	"go.elastic.co/apm/module/apmsql"
 	_ "go.elastic.co/apm/module/apmsql/pgxv4"
 	"go.uber.org/multierr"
@@ -76,7 +80,50 @@ func run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	triggerHandler := service.NewTriggerHandler(db, p)
+
+	var client *http.Client
+	{
+
+		var opts []discovery.ConsulDiscoveryOption
+		if cfg.ConsulAddress != "" {
+			opts = append(opts, discovery.ConsulDiscoveryWithAddress(cfg.ConsulAddress))
+		}
+
+		var discoverer discovery.Discoverer
+		discoverer, err = discovery.NewConsulDiscovery(opts...)
+		if err != nil {
+			return
+		}
+
+		discoverer, err = discovery.DiscoverWithPolling(ctx, discoverer)
+		if err != nil {
+			return
+		}
+
+		tc := &authentication.ClientCredentialsTokenCreator{
+			Client: discovery.ClientWithDiscovery(apmhttp.WrapClient(&http.Client{
+				Timeout: time.Second * 15,
+			}), discoverer),
+			ClientCredentials: authentication.ClientCredentials{
+				ID:     cfg.ClientCredentials.ID,
+				Secret: cfg.ClientCredentials.Secret,
+			},
+		}
+
+		client = discovery.ClientWithDiscovery(
+			authentication.ClientWithAuthentication(
+				apmhttp.WrapClient(&http.Client{
+					Timeout: time.Second * 15,
+				}),
+				tc,
+			),
+			discoverer,
+		)
+	}
+
+	triggerHandler := service.NewTriggerHandler(db, p, &internal.CloudwalletClient{
+		Client: client,
+	})
 	c, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "Trigger", config)
 	if err != nil {
 		return err
