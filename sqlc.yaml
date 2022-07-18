@@ -25,3 +25,5 @@ overrides:
     go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"
   - column: "policy_events.nym_id"
     go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"
+  - column: "user_policies.nym_id"
+    go_type: "git.digitus.me/prosperus/protocol/identity.PublicKey"

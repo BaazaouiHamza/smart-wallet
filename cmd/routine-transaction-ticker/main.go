@@ -112,7 +112,7 @@ func run(ctx context.Context) (err error) {
 
 	config := publisher.NewNSQConfig()
 	c, err := publisher.NewConsumer(
-		context.Background(), internal.RoutineTransactionPolicyTopic, "smart-wallet-ticker", config,
+		ctx, internal.RoutineTransactionPolicyTopic, "smart-wallet-ticker", config,
 	)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func run(ctx context.Context) (err error) {
 		c.AddHandler(service.HandleRTPMessages(rtpTicker))
 
 		// Should be read from config
-		err = c.ConnectToNSQLookupd(cfg.NsqLookupAddress)
+		err = c.ConnectToNSQD(cfg.NsqLookupAddress)
 		if err != nil {
 			return err
 		}

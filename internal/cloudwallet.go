@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -74,11 +75,13 @@ func (c *CloudwalletClient) SendAmounts(
 
 	res, err := c.Client.Do(req)
 	if err != nil {
+		return nil, err
 	}
-
+	if res.StatusCode != 200 {
+		return nil, errors.New("could not send transaction")
+	}
 	defer res.Body.Close()
 	var t cwTransfer
-
 	if err := json.NewDecoder(res.Body).Decode(&t); err != nil {
 		return nil, err
 	}

@@ -8,5 +8,10 @@
   },
   "port": 4000,
   "consulAddress": "http://testing.prosperus.tech:8500",
-  "nsqLookUpAddress":"127.0.0.1:4150"
+  "nsqLookUpAddressProsperus":"http://testing.prosperus.tech:4161",
+  "nsqLookUpAddress":"127.0.0.1:4150",
+  "clientCredentials":{
+    "id":"internal",
+    "secret":"pQ6v1e503KcubAo"
+  }
 }

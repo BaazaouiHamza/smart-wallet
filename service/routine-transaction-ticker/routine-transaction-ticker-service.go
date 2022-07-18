@@ -51,7 +51,7 @@ func (im *InMemory) runCronJobs(
 	logger := prospercontext.GetLogger(ctx)
 
 	// TODO: use actual frequency from rtp
-	frequency := "every 5s"
+	frequency := "every 1m"
 
 	negativeAmount := ptclTypes.Balance{}
 
@@ -62,7 +62,6 @@ func (im *InMemory) runCronJobs(
 	data, err := json.Marshal(types.TriggerMessage{
 		PolicyID: rtp.ID,
 		Amounts: map[identity.PublicKey]ptclTypes.Balance{
-			rtp.NymID:     negativeAmount,
 			rtp.Recipient: rtp.Amount,
 		},
 	})
@@ -77,8 +76,10 @@ func (im *InMemory) runCronJobs(
 			if err := im.publisher.Publish("transactions", data); err != nil {
 				logger.Error("could not publish message", zap.Any("policy", rtp), zap.Error(err))
 			}
+			logger.Debug("Published Transaction", zap.Any("rtp", rtp))
 		} else if now.After(rtp.ScheduleEndDate) {
 			im.HandleDeletePolicy(ctx, rtp.ID)
+			logger.Debug("Policy deleted", zap.Any("policy", rtp))
 		}
 	})
 	if err != nil {
@@ -101,7 +102,7 @@ func HandleRTPMessages(rtpTicker RTPTicker) func(ctx context.Context, m *nsq.Mes
 	return func(ctx context.Context, msg *nsq.Message) error {
 		logger := prospercontext.GetLogger(ctx)
 		var data types.RoutineTransactionPolicy
-		if err := publisher.Decode(msg.Body, data); err != nil {
+		if err := publisher.Decode(msg.Body, &data); err != nil {
 			return err
 		}
 

@@ -6,6 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"git.digitus.me/library/prosper-kit/application"
@@ -16,6 +19,7 @@ import (
 	"git.digitus.me/pfe/smart-wallet/internal"
 	service "git.digitus.me/pfe/smart-wallet/service/trigger-handler-service"
 	"git.digitus.me/pfe/smart-wallet/types"
+
 	ptclTypes "git.digitus.me/prosperus/protocol/types"
 	"git.digitus.me/prosperus/publisher"
 	"github.com/nsqio/go-nsq"
@@ -138,14 +142,14 @@ func run(ctx context.Context) (err error) {
 
 		triggerConsumer.AddHandler(func(ctx context.Context, m *nsq.Message) error {
 			var data types.TriggerMessage
-			if err := publisher.Decode(m.Body, data); err != nil {
+			if err := publisher.Decode(m.Body, &data); err != nil {
 				return err
 			}
 
 			return triggerHandler.HandleTrigger(ctx, data)
 		})
 
-		if err := triggerConsumer.ConnectToNSQLookupd(cfg.NsqLookupAddress); err != nil {
+		if err := triggerConsumer.ConnectToNSQD(cfg.NsqLookupAddress); err != nil {
 			return err
 		}
 	}
@@ -164,22 +168,24 @@ func run(ctx context.Context) (err error) {
 
 		notarizationConsumer.AddHandler(func(ctx context.Context, m *nsq.Message) error {
 			var n ptclTypes.Notarization
-			if err := publisher.Decode(m.Body, n); err != nil {
+			if err := publisher.Decode(m.Body, &n); err != nil {
 				return err
 			}
 
 			return triggerHandler.HandleNotarization(ctx, &n)
 		})
 
-		if err := notarizationConsumer.ConnectToNSQLookupd(cfg.NsqLookupAddress); err != nil {
+		if err := notarizationConsumer.ConnectToNSQLookupd(cfg.NsqLookupAddressProsperus); err != nil {
 			return err
 		}
 	}
-
+	killSig := make(chan os.Signal, 1)
+	signal.Notify(killSig, os.Interrupt, syscall.SIGTERM)
+	<-killSig
 	return nil
+
 }
 
 func main() {
-	// This is where we read events and launch transactions according to policies
 	application.WaitForInterrupt(run)
 }

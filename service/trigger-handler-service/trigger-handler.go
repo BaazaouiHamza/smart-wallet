@@ -20,18 +20,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Cloudwallet interface {
-	SendAmounts(
-		ctx context.Context,
-		sender identity.PublicKey,
-		recipients map[identity.PublicKey]ptclTypes.Balance,
-		context string,
-	) (*ptclTypes.RawTransfer, error)
-	GetUserState(
-		context.Context, identity.PublicKey,
-	) (*ptclTypes.UserState, error)
-}
-
 type TriggerHandler interface {
 	HandleNotarization(context.Context, *ptclTypes.Notarization) error
 	HandleTrigger(context.Context, types.TriggerMessage) error
@@ -39,19 +27,19 @@ type TriggerHandler interface {
 
 type TtpHandler struct {
 	db          *sql.DB
-	cloudwallet Cloudwallet
+	cloudwallet internal.CloudwalletClient
 	publisher   *nsq.Producer
 }
 
 var _ TriggerHandler = (*TtpHandler)(nil)
 
 func NewTriggerHandler(
-	db *sql.DB, p *nsq.Producer, cloudwallet Cloudwallet,
+	db *sql.DB, p *nsq.Producer, cloudwallet *internal.CloudwalletClient,
 ) TriggerHandler {
 	return &TtpHandler{
 		db:          db,
 		publisher:   p,
-		cloudwallet: cloudwallet,
+		cloudwallet: *cloudwallet,
 	}
 }
 
@@ -232,29 +220,23 @@ func (th *TtpHandler) HandleTrigger(
 		return err
 	}
 
-	pk, err := identity.PublicKeyFromString(policy.NymID)
-	if err != nil {
-		return err
-	}
-
 	// BUG: fees not being set
-	res, err := th.cloudwallet.SendAmounts(
+	_, err = th.cloudwallet.SendAmounts(
 		ctx,
-		*pk,
+		policy.NymID,
 		m.Amounts,
 		fmt.Sprintf("policy-%d-%s", m.PolicyID, uuid.New()),
 	)
 	if err != nil {
 		return err
 	}
-
-	if _, err = repository.New(th.db).InsertPolicyEvent(ctx, repository.InsertPolicyEventParams{
-		PolicyID:         int64(m.PolicyID),
-		TransferSequence: *res.Peers[*pk].TransferSequence,
-		NymID:            *pk,
-	}); err != nil {
-		return fmt.Errorf("could not insert policy event: %w", err)
-	}
+	// if _, err = repository.New(th.db).InsertPolicyEvent(ctx, repository.InsertPolicyEventParams{
+	// 	PolicyID:         int64(m.PolicyID),
+	// 	TransferSequence: *res.Peers[policy.NymID].TransferSequence,
+	// 	NymID:            policy.NymID,
+	// }); err != nil {
+	// 	return fmt.Errorf("could not insert policy event: %w", err)
+	// }
 
 	return nil
 }
