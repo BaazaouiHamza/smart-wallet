@@ -28,6 +28,6 @@ INHERITS (
 CREATE TABLE "policy_events" (
   "nym_id" VARCHAR NOT NULL,
   "transfer_sequence" BIGINT NOT NULL,
-  "policy_id" BIGINT NOT NULL REFERENCES "user_policies" ("id"),
+  "policy_id" BIGINT NOT NULL,
   PRIMARY KEY ("nym_id", "transfer_sequence")
 );

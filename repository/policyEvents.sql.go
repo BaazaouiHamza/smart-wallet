@@ -26,7 +26,8 @@ func (q *Queries) GetPolicyEvent(ctx context.Context, arg GetPolicyEventParams) 
 }
 
 const insertPolicyEvent = `-- name: InsertPolicyEvent :one
-INSERT INTO policy_events (nym_id,transfer_sequence,policy_id) VALUES($1,$2,$3) RETURNING nym_id, transfer_sequence, policy_id
+INSERT INTO policy_events (nym_id,transfer_sequence,policy_id) 
+VALUES($1,$2,$3) RETURNING nym_id, transfer_sequence, policy_id
 `
 
 type InsertPolicyEventParams struct {

@@ -131,7 +131,7 @@ func run(ctx context.Context) (err error) {
 	})
 
 	{
-		triggerConsumer, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "smart-wallet-trigger", config)
+		triggerConsumer, err := publisher.NewConsumer(ctx, internal.TransactionsTopic, "smart-wallet-transaction", config)
 		if err != nil {
 			return err
 		}

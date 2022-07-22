@@ -69,11 +69,12 @@ func (th *TtpHandler) retryTransactionIfMatchesPolicy(
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("could not marshal %w", err)
+			return err
 		}
 
 		if err := th.publisher.Publish(internal.TransactionsTopic, data); err != nil {
 			logger.Error("could not publish message", zap.Any("Trigger Message", data), zap.Error(err))
+			return err
 		}
 	}
 
@@ -84,7 +85,6 @@ func (th *TtpHandler) HandleNotarization(
 	ctx context.Context, n *ptclTypes.Notarization,
 ) error {
 	logger := prospercontext.GetLogger(ctx)
-
 	if !n.TransactionResult.Success() {
 		return th.retryTransactionIfMatchesPolicy(ctx, n)
 	}
@@ -102,9 +102,9 @@ func (th *TtpHandler) HandleNotarization(
 	if err != nil {
 		return err
 	}
-
 	for _, ttp := range ttps {
 		matchingPolicies = append(matchingPolicies, types.TransactionTriggerPolicy{
+			ID:              int(ttp.ID),
 			Name:            ttp.Name,
 			Description:     ttp.Description,
 			NymID:           ttp.NymID,
@@ -113,7 +113,6 @@ func (th *TtpHandler) HandleNotarization(
 			Amount:          ttp.Amount,
 		})
 	}
-
 	pks := make([]identity.PublicKey, 0, len(matchingPolicies))
 	for _, p := range matchingPolicies {
 		pks = append(pks, p.NymID)
@@ -221,7 +220,7 @@ func (th *TtpHandler) HandleTrigger(
 	}
 
 	// BUG: fees not being set
-	_, err = th.cloudwallet.SendAmounts(
+	res, err := th.cloudwallet.SendAmounts(
 		ctx,
 		policy.NymID,
 		m.Amounts,
@@ -230,13 +229,13 @@ func (th *TtpHandler) HandleTrigger(
 	if err != nil {
 		return err
 	}
-	// if _, err = repository.New(th.db).InsertPolicyEvent(ctx, repository.InsertPolicyEventParams{
-	// 	PolicyID:         int64(m.PolicyID),
-	// 	TransferSequence: *res.Peers[policy.NymID].TransferSequence,
-	// 	NymID:            policy.NymID,
-	// }); err != nil {
-	// 	return fmt.Errorf("could not insert policy event: %w", err)
-	// }
+	if _, err = repository.New(th.db).InsertPolicyEvent(ctx, repository.InsertPolicyEventParams{
+		PolicyID:         int64(m.PolicyID),
+		TransferSequence: *res.Peers[policy.NymID].TransferSequence,
+		NymID:            policy.NymID,
+	}); err != nil {
+		return fmt.Errorf("could not insert policy event: %w", err)
+	}
 
 	return nil
 }

@@ -51,7 +51,7 @@ func (im *InMemory) runCronJobs(
 	logger := prospercontext.GetLogger(ctx)
 
 	// TODO: use actual frequency from rtp
-	frequency := "every 1m"
+	frequency := "every 5m"
 
 	negativeAmount := ptclTypes.Balance{}
 
