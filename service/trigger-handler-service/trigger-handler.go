@@ -76,6 +76,7 @@ func (th *TtpHandler) retryTransactionIfMatchesPolicy(
 			logger.Error("could not publish message", zap.Any("Trigger Message", data), zap.Error(err))
 			return err
 		}
+		logger.Debug("Retry Matching Policy and Publish", zap.Any("Trigger Message", data))
 	}
 
 	return nil
@@ -86,7 +87,10 @@ func (th *TtpHandler) HandleNotarization(
 ) error {
 	logger := prospercontext.GetLogger(ctx)
 	if !n.TransactionResult.Success() {
-		return th.retryTransactionIfMatchesPolicy(ctx, n)
+		err := th.retryTransactionIfMatchesPolicy(ctx, n)
+		if err != nil {
+			return err
+		}
 	}
 
 	var (
@@ -169,6 +173,7 @@ func (th *TtpHandler) HandleNotarization(
 							zap.Error(err),
 						)
 					}
+					logger.Debug("Published Trigger Policy From Matching Policy", zap.Any("Trigger Message", data))
 				}
 
 			}
@@ -203,6 +208,7 @@ func (th *TtpHandler) HandleNotarization(
 				if err := th.publisher.Publish(internal.TransactionsTopic, data); err != nil {
 					logger.Error("could not publish message", zap.Any("triggerPolicy", p), zap.Error(err))
 				}
+				logger.Debug("Published Trigger Policy From UsLookUp", zap.Any("Trigger Message", data))
 			}
 		}
 
