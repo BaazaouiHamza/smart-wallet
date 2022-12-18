@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -18,11 +19,14 @@ import (
 	"git.digitus.me/pfe/smart-wallet/api"
 	"git.digitus.me/pfe/smart-wallet/repository"
 	"git.digitus.me/pfe/smart-wallet/service"
+	"git.digitus.me/pfe/smart-wallet/tracing"
 	"git.digitus.me/prosperus/publisher"
 	"github.com/nsqio/go-nsq"
 	"go.elastic.co/apm/module/apmhttp"
 	"go.elastic.co/apm/module/apmsql"
 	_ "go.elastic.co/apm/module/apmsql/pgxv4"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
@@ -43,6 +47,13 @@ type smartWalletConfig struct {
 }
 
 func run(ctx context.Context) (err error) {
+	tp, tpErr := tracing.JaegerTraceProvider()
+	if tpErr != nil {
+		log.Fatal(tpErr)
+	}
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+
 	var logger *zap.Logger
 	if logger, err = zap.NewDevelopment(); err != nil {
 		return
@@ -145,6 +156,7 @@ func run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
+
 	var svc = service.NewSmartWallet(db, p)
 	engine := server.ReasonableEngine()
 	api.NewServer(svc, engine, jwsGetter)
