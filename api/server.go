@@ -4,6 +4,7 @@ import (
 	"git.digitus.me/library/prosper-kit/middleware"
 	"git.digitus.me/pfe/smart-wallet/service"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	_ "git.digitus.me/pfe/smart-wallet/docs"
 	swaggerFiles "github.com/swaggo/files"
@@ -38,6 +39,7 @@ func (server *Server) setUpRouter(engine *gin.Engine) {
 
 	// TODO: get actual JWSGetter
 	router := engine.Group("/api")
+	router.Use(otelgin.Middleware("Smart-Wallet"))
 	router.Use(middleware.WithAuthentication(server.jwsGetter))
 
 	{

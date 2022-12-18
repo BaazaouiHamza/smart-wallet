@@ -12,6 +12,7 @@ import (
 	"git.digitus.me/pfe/smart-wallet/types"
 	"git.digitus.me/prosperus/protocol/identity"
 	"github.com/nsqio/go-nsq"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type SmartWallet interface {
@@ -39,6 +40,8 @@ type SmartWallet interface {
 	IsUserError(error) bool
 }
 
+const otelName = "git.digitus.me/pfe/smart-wallet/service"
+
 var _ SmartWallet = (*SmartWalletStd)(nil)
 
 type SmartWalletStd struct {
@@ -53,6 +56,13 @@ func NewSmartWallet(db *sql.DB, p *nsq.Producer) SmartWallet {
 func (r *SmartWalletStd) GetRoutineTransactionPolicy(
 	ctx context.Context, pk identity.PublicKey, id int,
 ) (*types.RoutineTransactionPolicy, error) {
+
+	ctx, span := trace.SpanFromContext(ctx).
+		TracerProvider().
+		Tracer(otelName).
+		Start(ctx, "RTP.Get")
+	defer span.End()
+
 	rtp, err := repository.New(r.DB).GetRTP(ctx, repository.GetRTPParams{
 		NymID: pk,
 		ID:    int64(id),
@@ -77,6 +87,12 @@ func (r *SmartWalletStd) GetRoutineTransactionPolicy(
 func (r *SmartWalletStd) CreateRoutineTransactionPolicy(
 	ctx context.Context, rtp types.RoutineTransactionPolicy,
 ) error {
+	ctx, span := trace.SpanFromContext(ctx).
+		TracerProvider().
+		Tracer(otelName).
+		Start(ctx, "RTP.Create")
+	defer span.End()
+
 	Rtp, err := repository.New(r.DB).CreateRTP(ctx, repository.CreateRTPParams{
 		Name:              rtp.Name,
 		Description:       rtp.Description,
@@ -209,6 +225,12 @@ func (r *SmartWalletStd) GetTransactionTriggerPolicy(
 func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.RoutineTransactionPolicy, int, error) {
+	ctx, span := trace.SpanFromContext(ctx).
+		TracerProvider().
+		Tracer(otelName).
+		Start(ctx, "RTP.Create")
+	defer span.End()
+
 	rtps, err := repository.New(r.DB).ListRTP(ctx, repository.ListRTPParams{
 		NymID:  nym,
 		Limit:  int32(itemsPerPage),
@@ -244,6 +266,12 @@ func (r *SmartWalletStd) ListRoutineTransactionPolicies(
 func (r *SmartWalletStd) ListTransactionTriggerPolicies(
 	ctx context.Context, nym identity.PublicKey, page, itemsPerPage int,
 ) ([]types.TransactionTriggerPolicy, int, error) {
+	ctx, span := trace.SpanFromContext(ctx).
+		TracerProvider().
+		Tracer(otelName).
+		Start(ctx, "RTP.Create")
+	defer span.End()
+
 	ttps, err := repository.New(r.DB).ListTTP(ctx, repository.ListTTPParams{
 		NymID:  nym,
 		Limit:  int32(itemsPerPage),
